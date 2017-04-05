@@ -1,11 +1,25 @@
+import numpy as np
+from scipy.spatial.distance import cdist, pdist, squareform
+
+from core import Classifier1NN
+from genetic import (
+    ArithmeticCrossoverOperator,
+    BinaryTournamentSelectionOperator,
+    ElitistMixin,
+    GeneticAlgorithmMixin,
+    NormalMutationOperator,
+)
+
+
 class BaseAlgorithm(object):
     pass
 
+
 class LocalSearchAlgorithm(BaseAlgorithm):
-    def __init__(self, dataset):
+    def __init__(self, dataset, max_evaluations=15000):
         self.classifier = Classifier1NN(dataset)
         self.N = len(dataset.observations[0])
-        self.max_evaluations = 15000
+        self.max_evaluations = max_evaluations
         self.max_neighbours = 20 * self.N
 
     def train(self):
@@ -81,3 +95,17 @@ class ReliefAlgorithm(BaseAlgorithm):
         self.w[self.w < 0] = 0  # truncate negative values
         self.w[self.w > 0] /= self.w.max()  # normalize to [0, 1]
         # ^ this will NEVER divide by 0 ^
+
+
+class ACEGeneticAlgorithm(BaseAlgorithm, GeneticAlgorithmMixin, ElitistMixin):
+    def __init__(self, dataset):
+        super(ACEGeneticAlgorithm, self).__init__(
+            n_chromosomes=30,
+            n_genes=len(dataset.labels),
+            max_evaluations=15000
+        )
+
+        self.classifier = Classifier1NN(dataset)
+        self.selection = BinaryTournamentSelectionOperator()
+        self.crossover = ArithmeticCrossoverOperator(probability=0.7, alpha=0.3)
+        self.mutation = NormalMutationOperator(probability=0.001, sigma=0.3)
