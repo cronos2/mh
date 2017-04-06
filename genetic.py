@@ -1,5 +1,7 @@
 import numpy as np
 
+from core import Solution
+
 
 class BinaryTournamentSelectionOperator(object):
     def select(self, chromosomes):
@@ -38,7 +40,7 @@ class ArithmeticCrossoverOperator(object):
 
     def crossover(self, parents):
         if np.random.rand() < self.probability:
-            parents = [parent.chromosome for parent in parents]  # unpack Solution
+            parents = np.array([parent.chromosome for parent in parents])  # unpack Solution
             offspring = self.alpha * parents + (1 - self.alpha) * parents[::-1]
             return Solution.from_population(offspring)
         else:
@@ -65,14 +67,20 @@ class NormalMutationOperator(object):
 
 class GeneticAlgorithmMixin(object):
     def __init__(self, n_chromosomes, n_genes, max_evaluations):
-        self.population = [Solution(c) for c in np.random.rand(chromosomes, genes)]
+        self.population = [Solution(c) for c in np.random.rand(n_chromosomes, n_genes)]
         self.n_chromosomes = n_chromosomes
         self.n_genes = n_genes
         self.parents = []
+
         self.max_evaluations = max_evaluations
         self.current_evaluations = 0
 
-    def train():
+    def train(self):
+        for individual in self.population:
+            self.classifier.force_evaluation(individual)
+
+        self.current_evaluations = self.n_chromosomes  # == len(self.population)
+
         while self.current_evaluations < self.max_evaluations:
             # selection stage
 
@@ -80,18 +88,16 @@ class GeneticAlgorithmMixin(object):
 
             # crossover stage
 
-            parents_chromosomes = [p.chromosome for p in self.parents]
+            # parents_chromosomes = [p.chromosome for p in self.parents]
             _iterator = iter(self.parents)
             couples = np.array(zip(_iterator, _iterator))  # s -> (s0, s1), (s2, s3), ...
 
             offspring = np.apply_along_axis(self.crossover.crossover, axis=1, arr=couples)
-            offspring = offspring.reshape(-1, offspring.shape[-1])  # "flatten" array
+            offspring = offspring.reshape(-1)  # "flatten" array
 
             # mutation stage
 
-            np.apply_along_axis(self.mutation.mutate, axis=1, arr=offspring)
-            # ^ this should modify its argument chromosome in case of performance ^
-            # ^ FALSE ^
+            offspring = np.array([self.mutation.mutate(child) for child in offspring])
 
             # replacement stage
 
@@ -106,26 +112,26 @@ class GeneticAlgorithmMixin(object):
 class ElitistMixin(object):
     def generate_parents(self):
         matches = [np.random.choice(self.population, 2) for _ in self.population]
-        winners = [self.selection.select(match) for match in matches]
+        winners = np.array([self.selection.select(match) for match in matches])
         self.parents = winners
 
     def generate_population(self, offspring):
         # force all evaluations
 
-        for individual in self.population:
-            self.classifier.force_evaluation(individual)
+        # for individual in self.population:
+        #     self.classifier.force_evaluation(individual)
 
         for child in offspring:
             self.classifier.force_evaluation(child)
 
-        self.current_evaluations += self.n_chromosomes + len(offspring)
+        self.current_evaluations += offspring.shape[0]
 
         # "replace" worst child for best parent
 
-        worst = np.argmax(offspring)  # max error
         best = np.argmin(self.population)  # min error
 
-        if self.population[best] not in offspring[worst]:  # doesn't survive
+        if self.population[best] not in offspring:  # doesn't survive
+            worst = np.argmax(offspring)  # max error
             offspring[worst] = self.population[best]
 
         # actual replacement
@@ -137,19 +143,19 @@ class ElitistMixin(object):
 class StationaryMixin(object):
     def generate_parents(self):
         matches = [np.random.choice(self.population, 2) for _ in xrange(2)]
-        winners = [self.selection.select(match) for match in matches]
+        winners = np.array([self.selection.select(match) for match in matches])
         self.parents = winners
 
     def generate_population(self, offspring):
         # force all evaluations
 
-        for individual in self.population:
-            self.classifier.force_evaluation(individual)
+        # for individual in self.population:
+        #     self.classifier.force_evaluation(individual)
 
         for child in offspring:
             self.classifier.force_evaluation(child)
 
-        self.current_evaluations += self.n_chromosomes + len(offspring)  # TODO: improve upper bound
+        self.current_evaluations += 2
 
         # replace worst parents for best children
 
@@ -163,5 +169,6 @@ class StationaryMixin(object):
 
 
 '''
-TODO: evaluation counting
+TODO: use np.array everywhere !
+-> generate_parents
 '''

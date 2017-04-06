@@ -101,7 +101,7 @@ class ACEGeneticAlgorithm(BaseAlgorithm, GeneticAlgorithmMixin, ElitistMixin):
     def __init__(self, dataset):
         super(ACEGeneticAlgorithm, self).__init__(
             n_chromosomes=30,
-            n_genes=len(dataset.labels),
+            n_genes=len(dataset.observations[0]),
             max_evaluations=15000
         )
 

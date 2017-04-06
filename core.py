@@ -4,11 +4,28 @@ from scipy.spatial.distance import cdist, pdist, squareform
 
 class Solution(object):
     def __init__(self, chromosome, succ=None):
-        self.chromosome = chromosome
+        self.chromosome = np.array(chromosome)
         self.succ = succ
 
-    def __cmp__(self, other):
-        return self.succ.__cmp__(other.chromosome)
+    # comparison operators
+
+    def __ge__(self, other):
+        return self.succ.__ge__(other.succ)
+
+    def __gt__(self, other):
+        return self.succ.__gt__(other.succ)
+
+    def __le__(self, other):
+        return self.succ.__le__(other.succ)
+
+    def __lt__(self, other):
+        return self.succ.__lt__(other.succ)
+
+    def __str__(self):
+        return '{} ({})'.format(self.chromosome, self.succ)
+
+    def __repr__(self):
+        return str(self)
 
     @staticmethod
     def from_population(population):
@@ -27,12 +44,15 @@ class Classifier1NN(object):
 
         return error
 
-    def force_evaluation(self, solution):
-        chromosome = solution.chromosome
-        error = self.calculate_error(chromosome)
-        solution.succ = error
+    def force_evaluation(self, solution):  # TODO: name - doesn't actually force (?)
+        if solution.succ is None:
+            chromosome = solution.chromosome
+            error = self.calculate_error(chromosome)
+            solution.succ = error
 
-        return error
+            return error
+        else:
+            return solution.succ
 
 
 class Dataset(object):
