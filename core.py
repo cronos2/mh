@@ -98,8 +98,8 @@ class Dataset(object):
 
     def generate_partitions(self, N=5):
         total_items = len(self.labels)
-        permutations = [np.random.permutation(total_items) for _ in xrange(total_items - 1)]
-        permutations = [np.arange(total_items)] + permutations
+        permutations = [np.random.permutation(total_items) for _ in xrange(N)]
+        # permutations = [np.arange(total_items)] + permutations
 
         partitions = [np.array_split(indices, 2) for indices in permutations]
         partitions = np.array([(
