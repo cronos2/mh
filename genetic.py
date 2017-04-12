@@ -58,7 +58,9 @@ class NormalMutationOperator(object):
         mask = r < self.probability
         chromosome[mask] += self.sigma * np.random.randn(np.sum(mask))
 
-        return Solution(chromosome)
+        result = Solution(chromosome)
+        result.normalize()
+        return result
 
 
 class GeneticAlgorithmMixin(object):

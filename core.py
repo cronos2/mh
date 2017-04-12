@@ -7,6 +7,12 @@ class Solution(object):
         self.w = np.array(w)
         self.error = error
 
+    def normalize(self):
+        self.w[self.w < 0] = 0  # truncate negative values
+        if self.w.max() > 1:
+            self.w[self.w > 0] /= self.w.max()  # normalize to [0, 1]
+            # ^ this will NEVER divide by 0 ^
+
     # comparison operators
 
     def __ge__(self, other):
@@ -95,6 +101,14 @@ class Dataset(object):
 
     def set_observations(self, observations):
         self.observations = np.array(observations)
+        self.normalize_observations()
+
+    def normalize_observations(self):
+        features_max = self.observations.max(axis=0)
+        features_min = self.observations.min(axis=0)
+
+        self.observations = self.observations - features_min  # baseline
+        self.observations /= (features_max - features_min)  # -> [0, 1]
 
     def generate_partitions(self, N=5):
         total_items = len(self.labels)

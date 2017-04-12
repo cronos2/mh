@@ -35,6 +35,7 @@ class LocalSearchAlgorithm(BaseAlgorithm):
         while current_evaluations < self.max_evaluations and current_neighbours < self.max_neighbours:
             neighbour = Solution(self.solution.w.copy())
             neighbour.w[gene % self.n_features] += np.random.randn()
+            neighbour.normalize()
             self.classifier.evaluate_solution(neighbour)
 
             current_evaluations += 1
@@ -99,13 +100,8 @@ class ReliefAlgorithm(BaseAlgorithm):
             self.B - self.B[closest_friends['B']]
         ), axis=0)
 
-        # normalize w
-
-        self.w[self.w < 0] = 0  # truncate negative values
-        self.w[self.w > 0] /= self.w.max()  # normalize to [0, 1]
-        # ^ this will NEVER divide by 0 ^
-
         self.solution = Solution(self.w)  # adheres to BaseAlgorithm interface
+        self.solution.normalize()
         self.classifier.evaluate_solution(self.solution)
 
 

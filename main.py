@@ -18,9 +18,9 @@ def main():
     np.random.seed(0)
     databases = ['sonar', 'spambase', 'wdbc']
     algorithms = [
-        ReliefAlgorithm,
+        # ReliefAlgorithm,
         # LocalSearchAlgorithm,
-        # ACEGeneticAlgorithm,
+        ACEGeneticAlgorithm,
         # ACSGeneticAlgorithm,
         # BLXEGeneticAlgorithm,
         # BLXSGeneticAlgorithm
