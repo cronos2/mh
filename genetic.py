@@ -73,7 +73,7 @@ class GeneticAlgorithmMixin(object):
 
     def train(self):
         for individual in self.population:
-            self.classifier.force_evaluation(individual)
+            self.classifier.evaluate_solution(individual)
 
         self.current_evaluations = self.n_chromosomes  # == len(self.population)
 
@@ -115,7 +115,7 @@ class ElitistMixin(object):
         # force all evaluations
 
         for child in offspring:
-            self.classifier.force_evaluation(child)
+            self.classifier.evaluate_solution(child)
 
         self.current_evaluations += offspring.shape[0]
 

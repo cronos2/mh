@@ -14,6 +14,7 @@ from utils import ArffReader, Result, ResultsCollector
 
 
 def main():
+    np.seterr(all='raise')  # always raise error, no runtime warnings
     np.random.seed(0)
     databases = ['sonar', 'spambase', 'wdbc']
     algorithms = [
@@ -73,6 +74,9 @@ def main():
         # print('ACE', classifier.calculate_error(w1))
         # print('ACS', classifier.calculate_error(w2))
 
+    print results
+
+
 if __name__ == '__main__':
     prof = cProfile.Profile()
 
@@ -80,4 +84,4 @@ if __name__ == '__main__':
     main()
     prof.disable()
 
-    prof.print_stats()
+    prof.print_stats(sort='time')

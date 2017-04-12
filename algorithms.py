@@ -14,27 +14,27 @@ from genetic import (
 
 class BaseAlgorithm(object):
     def test(self, test_dataset):
-        return self.classifier.test_error(test_dataset, self.w)
+        return self.classifier.test_error(test_dataset, self.solution.w)
 
 
 class LocalSearchAlgorithm(BaseAlgorithm):
     def __init__(self, dataset, max_evaluations=15000):
         self.classifier = Classifier1NN(dataset)
         self.max_evaluations = max_evaluations
-        self.max_neighbours = 20 * self.N
+        self.n_features = dataset.observations.shape[1]  # number of columns
+        self.max_neighbours = 20 * self.n_features
 
     def train(self):
-        self.solution = Solution(np.random.rand(self.N))
+        self.solution = Solution(np.random.rand(self.n_features))
         self.classifier.evaluate_solution(self.solution)
 
-        N = dataset.observations.shape[1]  # number of columns
         current_evaluations = 0
         current_neighbours = 0
         gene = 0
 
         while current_evaluations < self.max_evaluations and current_neighbours < self.max_neighbours:
             neighbour = Solution(self.solution.w.copy())
-            neighbour.w[gene % self.N] += np.random.randn()
+            neighbour.w[gene % self.n_features] += np.random.randn()
             self.classifier.evaluate_solution(neighbour)
 
             current_evaluations += 1
@@ -106,6 +106,7 @@ class ReliefAlgorithm(BaseAlgorithm):
         # ^ this will NEVER divide by 0 ^
 
         self.solution = Solution(self.w)  # adheres to BaseAlgorithm interface
+        self.classifier.evaluate_solution(self.solution)
 
 
 class ACEGeneticAlgorithm(BaseAlgorithm, GeneticAlgorithmMixin, ElitistMixin):
