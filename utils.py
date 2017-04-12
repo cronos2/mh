@@ -37,6 +37,9 @@ class Result(object):
             'solution': (self.solution.w.tolist(), self.solution.error)
         }
 
+    def __str__(self):
+        return json.dumps(self.summary(), indent=4)
+
 class ResultsCollector(object):
     def __init__(self):
         self.results = []

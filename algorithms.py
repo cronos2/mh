@@ -5,6 +5,7 @@ from core import Classifier1NN, Solution
 from genetic import (
     ArithmeticCrossoverOperator,
     BinaryTournamentSelectionOperator,
+    BlendAlphaCrossoverOperator,
     ElitistMixin,
     StationaryMixin,
     GeneticAlgorithmMixin,

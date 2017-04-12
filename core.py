@@ -106,9 +106,19 @@ class Dataset(object):
     def normalize_observations(self):
         features_max = self.observations.max(axis=0)
         features_min = self.observations.min(axis=0)
+        diff = (features_max - features_min)
 
         self.observations = self.observations - features_min  # baseline
-        self.observations /= (features_max - features_min)  # -> [0, 1]
+
+        try:
+            self.observations /= diff  # -> [0, 1]
+        except FloatingPointError:  # dividing by zero
+            # there are some features sharing the same value in every observation
+            mask = (diff == 0)
+
+            print self.observations.shape, diff.shape
+            self.observations[:, ~mask] /= diff[~mask]  # normalize the non-zero
+            self.observations[:, mask] = 0 # this IS necessary (otherwise nan)
 
     def generate_partitions(self, N=5):
         total_items = len(self.labels)

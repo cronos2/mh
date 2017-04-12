@@ -145,7 +145,7 @@ class StationaryMixin(object):
         # force all evaluations
 
         for child in offspring:
-            self.classifier.force_evaluation(child)
+            self.classifier.evaluate_solution(child)
 
         self.current_evaluations += 2
 
@@ -158,9 +158,3 @@ class StationaryMixin(object):
 
         self.population[-2:] = selected
         self.parents = np.array([])
-
-
-'''
-TODO: use np.array everywhere !
--> generate_parents
-'''
