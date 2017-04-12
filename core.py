@@ -54,6 +54,21 @@ class Classifier1NN(object):
         else:
             return solution.succ
 
+    def test_error(self, test_dataset, w):
+        distances = cdist(
+            test_dataset,
+            self.dataset.observations,
+            metric='wminkowski',
+            p=2,
+            w=w
+        )
+
+        closest = np.argmin(distances, axis=1)  # by rows
+        guesses = self.dataset.labels[closest]
+        error = np.mean(test_dataset.labels != guesses)
+
+        return error
+
 
 class Dataset(object):
     def __init__(self, dataset=None, labels=None, observations=None):
@@ -79,15 +94,26 @@ class Dataset(object):
         permutations = [np.arange(total_items)] + permutations
 
         partitions = [np.array_split(indices, 2) for indices in permutations]
-        partitions = [{
-            'training': Dataset(
-                labels=self.labels[partition[0]],
-                observations=self.observations[partition[0]]
-            ),
-            'test': Dataset(
-                labels=self.labels[partition[1]],
-                observations=self.observations[partition[1]]
-            )
-        } for partition in partitions]
+        partitions = np.array([(
+            {
+                'train': Dataset(
+                    labels=self.labels[partition[0]],
+                    observations=self.observations[partition[0]]
+                ),
+                'test': Dataset(
+                    labels=self.labels[partition[1]],
+                    observations=self.observations[partition[1]]
+                )
+            },
+            {
+                'train': Dataset(
+                    labels=self.labels[partition[1]],
+                    observations=self.observations[partition[1]]
+                ),
+                'test': Dataset(
+                    labels=self.labels[partition[0]],
+                    observations=self.observations[partition[0]]
+                )
+        }) for partition in partitions]).flatten()
 
         return partitions
