@@ -1,46 +1,47 @@
 import numpy as np
 from scipy.spatial.distance import cdist, pdist, squareform
 
-from core import Classifier1NN
+from core import Classifier1NN, Solution
 from genetic import (
     ArithmeticCrossoverOperator,
     BinaryTournamentSelectionOperator,
     ElitistMixin,
+    StationaryMixin,
     GeneticAlgorithmMixin,
     NormalMutationOperator,
 )
 
 
 class BaseAlgorithm(object):
-    pass
+    def test(self, test_dataset):
+        return self.classifier.test_error(test_dataset, self.w)
 
 
 class LocalSearchAlgorithm(BaseAlgorithm):
     def __init__(self, dataset, max_evaluations=15000):
         self.classifier = Classifier1NN(dataset)
-        self.N = len(dataset.observations[0])
         self.max_evaluations = max_evaluations
         self.max_neighbours = 20 * self.N
 
     def train(self):
-        self.w = np.random.rand(self.N)
-        self.best_solution_found = self.w
-        self.best_solution_error = self.classifier.calculate_error(self.w)
+        self.solution = Solution(np.random.rand(self.N))
+        self.classifier.evaluate_solution(self.solution)
+
+        N = dataset.observations.shape[1]  # number of columns
         current_evaluations = 0
         current_neighbours = 0
         gene = 0
 
         while current_evaluations < self.max_evaluations and current_neighbours < self.max_neighbours:
-            neighbour = self.w.copy()
-            neighbour[gene % self.N] += np.random.randn()
-            neighbour_error = self.classifier.calculate_error(neighbour)
+            neighbour = Solution(self.solution.w.copy())
+            neighbour.w[gene % self.N] += np.random.randn()
+            self.classifier.evaluate_solution(neighbour)
 
             current_evaluations += 1
             gene += 1
 
-            if neighbour_error < self.best_solution_error:
-                self.w = neighbour
-                self.best_solution_error = neighbour_error
+            if neighbour.error < self.solution.error:
+                self.solution = neighbour
                 current_neighbours = 0
             else:
                 current_neighbours += 1
@@ -48,6 +49,7 @@ class LocalSearchAlgorithm(BaseAlgorithm):
 
 class ReliefAlgorithm(BaseAlgorithm):
     def __init__(self, dataset):
+        self.classifier = Classifier1NN(dataset)  # adheres to BaseAlgorithm if
         self.dataset = dataset
         self.split_datasets()
 
@@ -55,6 +57,13 @@ class ReliefAlgorithm(BaseAlgorithm):
         cond = self.dataset.labels == self.dataset.labels[0]
         self.A = self.dataset.observations[cond]
         self.B = self.dataset.observations[~cond]
+
+        try:
+            assert self.A.shape[0] != 0
+            assert self.B.shape[0] != 0
+        except AssertionError:
+            print 'Not enough representatives of either class for the RELIEF algorithm'
+            raise  # re-raise exception
 
         # We don't care about the actual distance but just need it to sort.
         # Therefore, we can use the squared euclidean metric which doesn't require
@@ -95,6 +104,8 @@ class ReliefAlgorithm(BaseAlgorithm):
         self.w[self.w < 0] = 0  # truncate negative values
         self.w[self.w > 0] /= self.w.max()  # normalize to [0, 1]
         # ^ this will NEVER divide by 0 ^
+
+        self.solution = Solution(self.w)  # adheres to BaseAlgorithm interface
 
 
 class ACEGeneticAlgorithm(BaseAlgorithm, GeneticAlgorithmMixin, ElitistMixin):

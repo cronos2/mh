@@ -3,64 +3,72 @@ from scipy.spatial.distance import cdist, pdist, squareform
 
 
 class Solution(object):
-    def __init__(self, chromosome, succ=None):
-        self.chromosome = np.array(chromosome)
-        self.succ = succ
+    def __init__(self, w, error=None):
+        self.w = np.array(w)
+        self.error = error
 
     # comparison operators
 
     def __ge__(self, other):
-        return self.succ.__ge__(other.succ)
+        return self.error.__ge__(other.error)
 
     def __gt__(self, other):
-        return self.succ.__gt__(other.succ)
+        return self.error.__gt__(other.error)
 
     def __le__(self, other):
-        return self.succ.__le__(other.succ)
+        return self.error.__le__(other.error)
 
     def __lt__(self, other):
-        return self.succ.__lt__(other.succ)
+        return self.error.__lt__(other.error)
 
     def __str__(self):
-        return '{} ({})'.format(self.chromosome, self.succ)
+        return '{} ({})'.format(self.w, self.error)
 
     def __repr__(self):
         return str(self)
 
+    @property
+    def succ(self):
+        return 1 - self.error
+
     @staticmethod
     def from_population(population):
-        return np.array([Solution(chromosome) for chromosome in population])
+        return np.array([Solution(w) for w in population])
 
 
 class Classifier1NN(object):
     def __init__(self, dataset):
         self.dataset = dataset
 
-    def calculate_error(self, w):
-        distances = squareform(pdist(self.dataset.observations, 'wminkowski', p=2, w=w))
+    def train_error(self, w):
+        distances = squareform(
+            pdist(
+                np.sqrt(w) * self.dataset.observations,
+                metric='sqeuclidean',
+            )
+        )
+
         np.fill_diagonal(distances, np.nan)  # so we can use np.nanargmin
         closest = np.nanargmin(distances, axis=1)  # by rows (should be equivalent)
         error = np.mean(self.dataset.labels != self.dataset.labels[closest])
 
         return error
 
-    def force_evaluation(self, solution):  # TODO: name - doesn't actually force (?)
-        if solution.succ is None:
-            chromosome = solution.chromosome
-            error = self.calculate_error(chromosome)
-            solution.succ = error
+    def evaluate_solution(self, solution):
+        if solution.error is None:
+            weights = solution.w
+            error = self.train_error(weights)
+            solution.error = error
 
             return error
         else:
-            return solution.succ
+            return solution.error
 
     def test_error(self, test_dataset, w):
         distances = cdist(
-            test_dataset,
-            self.dataset.observations,
-            metric='wminkowski',
-            p=2,
-            w=w
+            np.sqrt(w) * test_dataset.observations,
+            np.sqrt(w) * self.dataset.observations,
+            metric='sqeuclidean',
         )
 
         closest = np.argmin(distances, axis=1)  # by rows

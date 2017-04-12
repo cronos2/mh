@@ -8,7 +8,7 @@ class BinaryTournamentSelectionOperator(object):
         # this expects all candidates to be evaluated (!)
 
         candidates = np.random.choice(chromosomes, 2)
-        return min(candidates)  # less error
+        return np.min(candidates)  # less error
 
 
 class BlendAlphaCrossoverOperator(object):
@@ -18,7 +18,7 @@ class BlendAlphaCrossoverOperator(object):
 
     def crossover(self, parents):
         if np.random.rand() < self.probability:
-            parents = np.array([parent.chromosome for parent in parents])  # unpack Solution
+            parents = np.array([parent.w for parent in parents])  # unpack Solution
             min_components = np.minimum(*parents)  # c_min
             max_components = np.maximum(*parents)  # c_max
             diff = max_components - min_components    # I = c_max - c_min
@@ -40,7 +40,7 @@ class ArithmeticCrossoverOperator(object):
 
     def crossover(self, parents):
         if np.random.rand() < self.probability:
-            parents = np.array([parent.chromosome for parent in parents])  # unpack Solution
+            parents = np.array([parent.w for parent in parents])  # unpack Solution
             offspring = self.alpha * parents + (1 - self.alpha) * parents[::-1]
             return Solution.from_population(offspring)
         else:
@@ -52,25 +52,21 @@ class NormalMutationOperator(object):
         self.probability = probability
         self.sigma = sigma
 
-    def mutate(self, chromosome):  # TODO: copy chromosome array
-        chromosome = chromosome.chromosome.copy()  # unpack Solution
+    def mutate(self, chromosome):
+        chromosome = chromosome.w.copy()  # unpack Solution
         r = np.random.rand(*chromosome.shape)
         mask = r < self.probability
         chromosome[mask] += self.sigma * np.random.randn(np.sum(mask))
 
         return Solution(chromosome)
 
-        # if np.random.rand() < self.probability:  # TODO: this should act by GENE (!)
-        #     gene = np.random.choice(chromosome.shape[0])  # gene \in [0, length[
-        #     chromosome[gene] += self.sigma * np.random.randn()
-
 
 class GeneticAlgorithmMixin(object):
     def __init__(self, n_chromosomes, n_genes, max_evaluations):
-        self.population = [Solution(c) for c in np.random.rand(n_chromosomes, n_genes)]
+        self.population = np.array([Solution(c) for c in np.random.rand(n_chromosomes, n_genes)])
         self.n_chromosomes = n_chromosomes
         self.n_genes = n_genes
-        self.parents = []
+        self.parents = np.array([])
 
         self.max_evaluations = max_evaluations
         self.current_evaluations = 0
@@ -118,9 +114,6 @@ class ElitistMixin(object):
     def generate_population(self, offspring):
         # force all evaluations
 
-        # for individual in self.population:
-        #     self.classifier.force_evaluation(individual)
-
         for child in offspring:
             self.classifier.force_evaluation(child)
 
@@ -137,7 +130,7 @@ class ElitistMixin(object):
         # actual replacement
 
         self.population = offspring
-        self.parents = []
+        self.parents = np.array([])
 
 
 class StationaryMixin(object):
@@ -148,9 +141,6 @@ class StationaryMixin(object):
 
     def generate_population(self, offspring):
         # force all evaluations
-
-        # for individual in self.population:
-        #     self.classifier.force_evaluation(individual)
 
         for child in offspring:
             self.classifier.force_evaluation(child)
