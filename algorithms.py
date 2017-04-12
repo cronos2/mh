@@ -120,3 +120,45 @@ class ACEGeneticAlgorithm(BaseAlgorithm, GeneticAlgorithmMixin, ElitistMixin):
         self.selection = BinaryTournamentSelectionOperator()
         self.crossover = ArithmeticCrossoverOperator(probability=0.7, alpha=0.3)
         self.mutation = NormalMutationOperator(probability=0.001, sigma=0.3)
+
+
+class ACSGeneticAlgorithm(BaseAlgorithm, GeneticAlgorithmMixin, StationaryMixin):
+    def __init__(self, dataset):
+        super(ACSGeneticAlgorithm, self).__init__(
+            n_chromosomes=30,
+            n_genes=len(dataset.observations[0]),
+            max_evaluations=15000
+        )
+
+        self.classifier = Classifier1NN(dataset)
+        self.selection = BinaryTournamentSelectionOperator()
+        self.crossover = ArithmeticCrossoverOperator(probability=0.7, alpha=0.3)
+        self.mutation = NormalMutationOperator(probability=0.001, sigma=0.3)
+
+
+class BLXEGeneticAlgorithm(BaseAlgorithm, GeneticAlgorithmMixin, ElitistMixin):
+    def __init__(self, dataset):
+        super(BLXEGeneticAlgorithm, self).__init__(
+            n_chromosomes=30,
+            n_genes=len(dataset.observations[0]),
+            max_evaluations=15000
+        )
+
+        self.classifier = Classifier1NN(dataset)
+        self.selection = BinaryTournamentSelectionOperator()
+        self.crossover = BlendAlphaCrossoverOperator(probability=0.7, alpha=0.3)
+        self.mutation = NormalMutationOperator(probability=0.001, sigma=0.3)
+
+
+class BLXSGeneticAlgorithm(BaseAlgorithm, GeneticAlgorithmMixin, StationaryMixin):
+    def __init__(self, dataset):
+        super(BLXSGeneticAlgorithm, self).__init__(
+            n_chromosomes=30,
+            n_genes=len(dataset.observations[0]),
+            max_evaluations=15000
+        )
+
+        self.classifier = Classifier1NN(dataset)
+        self.selection = BinaryTournamentSelectionOperator()
+        self.crossover = BlendAlphaCrossoverOperator(probability=0.7, alpha=0.3)
+        self.mutation = NormalMutationOperator(probability=0.001, sigma=0.3)
