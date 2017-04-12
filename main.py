@@ -1,3 +1,6 @@
+# coding: utf-8
+
+import argparse
 import cProfile
 import numpy as np
 
@@ -16,14 +19,28 @@ from utils import ArffReader, Result, ResultsCollector
 def main():
     np.seterr(all='raise')  # always raise error, no runtime warnings
     np.random.seed(0)
+
+    parser = argparse.ArgumentParser(description='Ejecuta los experimentos de la primera práctica de Metaheurísticas')
+    parser.add_argument(
+        '-i, --interactive',
+        action='store_true',
+        dest='interactive'
+    )
+    parser.add_argument(
+        '-o, --output',
+        dest='output_filename',
+        default=None
+    )
+    args = parser.parse_args()
+
     databases = ['sonar', 'spambase', 'wdbc']
     algorithms = [
-        # ReliefAlgorithm,
-        # LocalSearchAlgorithm,
+        ReliefAlgorithm,
+        LocalSearchAlgorithm,
         ACEGeneticAlgorithm,
-        # ACSGeneticAlgorithm,
-        # BLXEGeneticAlgorithm,
-        # BLXSGeneticAlgorithm
+        ACSGeneticAlgorithm,
+        BLXEGeneticAlgorithm,
+        BLXSGeneticAlgorithm
     ]
 
     results = {}
@@ -48,34 +65,20 @@ def main():
                 res.end_timer()
 
                 res.solution = learner.solution
+
+                if args.interactive:
+                    print(res)
+
                 collector.append_result(res)
 
         results[alg.__name__] = collector
 
-        # relief = ReliefAlgorithm(parts[0]['training'])
-        # relief.train()
-        # print(relief.w)
-        # print 'Error RELIEF:', Classifier1NN(dataset).calculate_error(relief.w)
-
-        # ls = LocalSearchAlgorithm(parts[0]['training'])
-        # cProfile.runctx('ls.train()', globals={}, locals={'ls': ls})
-        # print(ls.w)
-        # print 'Error LS:', ls.classifier.calculate_error(ls.w)
-
-        # ace = ACEGeneticAlgorithm(parts[0]['train'])
-        # ace.train()
-        # print(ace.solution.chromosome)
-
-        # acs = ACSGeneticAlgorithm(parts[0]['train'])
-        # acs.train()
-        # print(acs.solution.chromosome)
-
-        # classifier = Classifier1NN(parts[0]['train'])
-        # print('ACE', classifier.calculate_error(w1))
-        # print('ACS', classifier.calculate_error(w2))
-
-    print results
-
+    if args.output_filename is None:
+        print results
+    else:
+        f = open(args.output_filename, 'wb')
+        f.write(str(results))
+        f.close()
 
 if __name__ == '__main__':
     prof = cProfile.Profile()
