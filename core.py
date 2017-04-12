@@ -116,7 +116,6 @@ class Dataset(object):
             # there are some features sharing the same value in every observation
             mask = (diff == 0)
 
-            print self.observations.shape, diff.shape
             self.observations[:, ~mask] /= diff[~mask]  # normalize the non-zero
             self.observations[:, mask] = 0 # this IS necessary (otherwise nan)
 
