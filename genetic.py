@@ -149,13 +149,13 @@ class StationaryMixin(object):
 
         # replace worst parents for best children
 
-        self.population.partition(-1)  # two worst (greater ones)
+        self.population.partition(-2)  # two worst (greater ones)
         offspring.partition(1)  # two best
-        contestants = np.stack((self.population[-1:], offspring[:1]))
-        selected = np.partition(contestants, 1)[:1]
+        contestants = np.concatenate((self.population[-2:], offspring[:2]))
+        selected = np.partition(contestants, 1)[:2]  # two best
 
-        self.population[-1:] = selected
-        self.parents = []
+        self.population[-2:] = selected
+        self.parents = np.array([])
 
 
 '''
