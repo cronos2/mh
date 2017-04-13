@@ -120,7 +120,7 @@ class Dataset(object):
             self.observations[:, mask] = 0 # this IS necessary (otherwise nan)
 
     def generate_partitions(self, N=5):
-        total_items = len(self.labels)
+        total_items = self.labels.shape[0]
         permutations = [np.random.permutation(total_items) for _ in xrange(N)]
         # permutations = [np.arange(total_items)] + permutations
 

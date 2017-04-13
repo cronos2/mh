@@ -15,7 +15,7 @@ from genetic import (
 
 class BaseAlgorithm(object):
     def test(self, test_dataset):
-        return self.classifier.test_error(test_dataset, self.solution.w)
+        return self.classifier.test_solution(test_dataset, self.solution)
 
 
 class LocalSearchAlgorithm(BaseAlgorithm):
@@ -91,7 +91,7 @@ class ReliefAlgorithm(BaseAlgorithm):
             'BA': np.argmin(self.distances['AB'], axis=0)  # by cols (!)
         }
 
-        self.w = np.sum(np.abs(
+        w = np.sum(np.abs(
             self.A - self.B[closest_enemies['AB']]
         ), axis=0) + np.sum(np.abs(
             self.B - self.A[closest_enemies['BA']]
@@ -101,7 +101,7 @@ class ReliefAlgorithm(BaseAlgorithm):
             self.B - self.B[closest_friends['B']]
         ), axis=0)
 
-        self.solution = Solution(self.w)  # adheres to BaseAlgorithm interface
+        self.solution = Solution(w)  # adheres to BaseAlgorithm interface
         self.solution.normalize()
         self.classifier.evaluate_solution(self.solution)
 

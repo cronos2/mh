@@ -21,7 +21,7 @@ class ArffReader(object):
 
 
 class Result(object):
-    def __init__(self, name = ''):
+    def __init__(self, name=''):
         self.name = name
 
     def start_timer(self):
