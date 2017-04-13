@@ -10,7 +10,10 @@ from algorithms import (
     BLXEGeneticAlgorithm,
     BLXSGeneticAlgorithm,
     LocalSearchAlgorithm,
-    ReliefAlgorithm
+    MemeticAlgorithmA,
+    MemeticAlgorithmB,
+    MemeticAlgorithmC,
+    ReliefAlgorithm,
 )
 from core import Classifier1NN
 from utils import ArffReader, Result, ResultsCollector

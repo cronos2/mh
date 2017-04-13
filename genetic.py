@@ -73,20 +73,25 @@ class GeneticAlgorithmMixin(object):
         self.max_evaluations = max_evaluations
         self.current_evaluations = 0
 
-    def train(self):
+    def train(self, max_generations=0):
         for individual in self.population:
             self.classifier.evaluate_solution(individual)
 
         self.current_evaluations = self.n_chromosomes  # == len(self.population)
+        current_generation = 0
 
-        while self.current_evaluations < self.max_evaluations:
+        # if max_generations is 0 then it doesn't set up a limit
+        while (self.current_evaluations < self.max_evaluations and
+                (current_generation < max_generations or not max_generations)):
+
+            current_generation += 1
+
             # selection stage
 
             self.generate_parents()  # from Elitist/Stationary Mixin
 
             # crossover stage
 
-            # parents_chromosomes = [p.chromosome for p in self.parents]
             _iterator = iter(self.parents)
             couples = np.array(zip(_iterator, _iterator))  # s -> (s0, s1), (s2, s3), ...
 
@@ -105,6 +110,8 @@ class GeneticAlgorithmMixin(object):
         # end of training
 
         self.solution = np.min(self.population)  # less error
+
+        return self.current_evaluations
 
 
 class ElitistMixin(object):

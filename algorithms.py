@@ -11,6 +11,7 @@ from genetic import (
     GeneticAlgorithmMixin,
     NormalMutationOperator,
 )
+from memetic import MemeticAlgorithmMixin
 
 
 class BaseAlgorithm(object):
@@ -19,11 +20,11 @@ class BaseAlgorithm(object):
 
 
 class LocalSearchAlgorithm(BaseAlgorithm):
-    def __init__(self, dataset, max_evaluations=15000):
+    def __init__(self, dataset, max_evaluations=15000, attempts_per_gene=20):
         self.classifier = Classifier1NN(dataset)
         self.max_evaluations = max_evaluations
         self.n_features = dataset.observations.shape[1]  # number of columns
-        self.max_neighbours = 20 * self.n_features
+        self.max_neighbours = attempts_per_gene * self.n_features
 
     def train(self):
         self.solution = Solution(np.random.rand(self.n_features))
@@ -33,7 +34,8 @@ class LocalSearchAlgorithm(BaseAlgorithm):
         current_neighbours = 0
         gene = 0
 
-        while current_evaluations < self.max_evaluations and current_neighbours < self.max_neighbours:
+        while (current_evaluations < self.max_evaluations and
+               current_neighbours < self.max_neighbours):
             neighbour = Solution(self.solution.w.copy())
             neighbour.w[gene % self.n_features] += np.random.randn()
             neighbour.normalize()
@@ -48,6 +50,7 @@ class LocalSearchAlgorithm(BaseAlgorithm):
             else:
                 current_neighbours += 1
 
+        return current_evaluations
 
 class ReliefAlgorithm(BaseAlgorithm):
     def __init__(self, dataset):
@@ -152,7 +155,7 @@ class BLXSGeneticAlgorithm(BaseAlgorithm, GeneticAlgorithmMixin, StationaryMixin
     def __init__(self, dataset):
         super(BLXSGeneticAlgorithm, self).__init__(
             n_chromosomes=30,
-            n_genes=len(dataset.observations[0]),
+            n_genes=dataset.observations.shape[1],
             max_evaluations=15000
         )
 
@@ -160,3 +163,72 @@ class BLXSGeneticAlgorithm(BaseAlgorithm, GeneticAlgorithmMixin, StationaryMixin
         self.selection = BinaryTournamentSelectionOperator()
         self.crossover = BlendAlphaCrossoverOperator(probability=1, alpha=0.3)
         self.mutation = NormalMutationOperator(probability=0.001, sigma=0.3)
+
+
+class MemeticAdaptedGA(ACEGeneticAlgorithm):
+    def __init__(self, dataset):
+        super(MemeticAdaptedGA, self).__init__(dataset)
+        GeneticAlgorithmMixin.__init__(
+            self,
+            n_chromosomes=10,
+            n_genes=dataset.observations.shape[1],
+            max_evaluations=1500
+        )  # set GA parameters accordingly
+
+
+class BaseMemeticAlgorithm(BaseAlgorithm, MemeticAlgorithmMixin):
+    def __init__(self, dataset):
+        super(BaseMemeticAlgorithm, self).__init__(
+            max_evaluations=15000
+        )
+
+        self.ga = MemeticAdaptedGA(dataset)
+        self.ga_generations = 10
+        self.exploiter = LocalSearchAlgorithm(
+            dataset,
+            max_evaluations=2 * dataset.observations.shape[1],
+            attempts_per_gene=2
+        )
+
+        self.classifier = self.ga.classifier  # can use the same one
+
+
+class MemeticAlgorithmA(BaseMemeticAlgorithm):
+    def exploit(self):  # every individual gets exploited
+        for i, agent in enumerate(self.ga.population):
+            self._reset_exploiter()
+            self.exploiter.solution = agent
+            self.current_evaluations += self.exploiter.train()  # returns used evals
+            print 'Current evaluations', self.current_evaluations
+
+            self.ga.population[i] = self.exploiter.solution  # replace agent
+
+
+class MemeticAlgorithmB(BaseMemeticAlgorithm):
+    def exploit(self):  # just a (random) 10% of the population
+        n_chromosomes = self.ga.population.shape[0]
+        indices = np.random.choice(n_chromosomes, n_chromosomes / 10)
+
+        for index in indices:
+            self._reset_exploiter()
+            agent = self.ga.population[index]
+            self.exploiter.solution = agent
+            self.current_evaluations += self.exploiter.train()  # returns used evals
+
+            self.ga.population[index] = self.exploiter.solution  # replace agent
+
+
+class MemeticAlgorithmC(BaseMemeticAlgorithm):
+    def exploit(self):  # just the best 10% of the population
+        n_chromosomes = self.ga.population.shape[0]
+        tenth = n_chromosomes / 10
+        self.ga.population.partition(tenth - 1)  # -1 to get index
+        # ^ this puts the <tenth> best agents in the front ^
+
+        for index in xrange(tenth):
+            self._reset_exploiter()
+            agent = self.ga.population[index]
+            self.exploiter.solution = agent
+            self.current_evaluations += self.exploiter.train()  # returns used evals
+
+            self.ga.population[index] = self.exploiter.solution  # replace agent
