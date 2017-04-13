@@ -55,7 +55,10 @@ def main():
             for i, partition in enumerate(partitions):
                 name = '{db} - {i}'.format(db=db, i=i)
                 res = Result(name=name)
-                res.indices = partition.indices
+                res.indices = {
+                    name: array.tolist()  # cast np arrays to normal lists (JSON)
+                    for name, array in partition.indices.iteritems()
+                }
 
                 res.start_timer()
 
@@ -73,7 +76,7 @@ def main():
 
                 # set up Result
 
-                res.solution = learner.solution
+                res.solution = learner.solution.w.tolist()  # cast np array to list
                 res.train_error = train_error
                 res.test_error = test_error
 
