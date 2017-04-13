@@ -38,12 +38,15 @@ def main():
 
     databases = ['sonar', 'spambase', 'wdbc']
     algorithms = [
-        ReliefAlgorithm,
-        LocalSearchAlgorithm,
-        ACEGeneticAlgorithm,
-        ACSGeneticAlgorithm,
-        BLXEGeneticAlgorithm,
-        BLXSGeneticAlgorithm
+        # ReliefAlgorithm,
+        # LocalSearchAlgorithm,
+        # ACEGeneticAlgorithm,
+        # ACSGeneticAlgorithm,
+        # BLXEGeneticAlgorithm,
+        # BLXSGeneticAlgorithm,
+        MemeticAlgorithmA,
+        MemeticAlgorithmB,
+        MemeticAlgorithmC,
     ]
 
     results = {}
@@ -51,9 +54,15 @@ def main():
     for alg in algorithms:
         collector = ResultsCollector()
 
+        if args.interactive:
+            print('{emph} {alg} {emph}'.format(emph='='*20, alg=alg.__name__))
+
         for db in databases:
             dataset = ArffReader.read(db)
             partitions = dataset.generate_partitions()
+
+            if args.interactive:
+                print('{emph} {db} {emph}'.format(emph='*'*10, db=db))
 
             for i, partition in enumerate(partitions):
                 name = '{db} - {i}'.format(db=db, i=i)
