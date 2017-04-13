@@ -83,6 +83,16 @@ class Classifier1NN(object):
 
         return error
 
+    def test_solution(self, test_dataset, solution):
+        return self.test_error(test_dataset, solution.w)
+
+
+class Partition(object):
+    def __init__(self, dataset, indices):
+        self.training_set = dataset.from_indices(indices[0])
+        self.testing_set = dataset.from_indices(indices[1])
+        self.indices = dict(zip(('training', 'testing'), indices))
+
 
 class Dataset(object):
     def __init__(self, dataset=None, labels=None, observations=None):
@@ -119,32 +129,25 @@ class Dataset(object):
             self.observations[:, ~mask] /= diff[~mask]  # normalize the non-zero
             self.observations[:, mask] = 0 # this IS necessary (otherwise nan)
 
+    def from_indices(self, indices):
+        # v this IS necessary (otherwise renormalization) v
+        d = Dataset()  # set values directly to avoid rechecking
+        d.labels = self.labels[indices]
+        d.observations = self.observations[indices]
+
+        return d
+
     def generate_partitions(self, N=5):
         total_items = self.labels.shape[0]
         permutations = [np.random.permutation(total_items) for _ in xrange(N)]
         # permutations = [np.arange(total_items)] + permutations
 
-        partitions = [np.array_split(indices, 2) for indices in permutations]
-        partitions = np.array([(
-            {
-                'train': Dataset(
-                    labels=self.labels[partition[0]],
-                    observations=self.observations[partition[0]]
-                ),
-                'test': Dataset(
-                    labels=self.labels[partition[1]],
-                    observations=self.observations[partition[1]]
-                )
-            },
-            {
-                'train': Dataset(
-                    labels=self.labels[partition[1]],
-                    observations=self.observations[partition[1]]
-                ),
-                'test': Dataset(
-                    labels=self.labels[partition[0]],
-                    observations=self.observations[partition[0]]
-                )
-        }) for partition in partitions]).flatten()
+        partitions_indices = [
+            np.array_split(indices, 2)
+        for indices in permutations]
+
+        partitions = np.array([
+            (Partition(self, indices), Partition(self, indices[::-1]))
+            for indices in partitions_indices]).flatten()
 
         return partitions
