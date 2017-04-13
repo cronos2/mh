@@ -2,7 +2,7 @@ import arff
 import json
 import time
 
-#from core import Dataset
+from core import Dataset
 
 
 class ArffReader(object):
@@ -35,7 +35,7 @@ class Result(object):
             'indices': self.indices,  # this should be a dict with Python lists
             'name': self.name,
             'solution': self.solution,  # this should be a plain Python list
-            'test_error': self.test_error
+            'test_error': self.test_error,
             'time': self.exec_time,
             'train_error': self.train_error,
         }
