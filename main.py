@@ -50,21 +50,32 @@ def main():
 
         for db in databases:
             dataset = ArffReader.read(db)
-            parts = dataset.generate_partitions()
+            partitions = dataset.generate_partitions()
 
-            for i, part in enumerate(parts):
+            for i, partition in enumerate(partitions):
                 name = '{db} - {i}'.format(db=db, i=i)
                 res = Result(name=name)
+                res.indices = partition.indices
 
                 res.start_timer()
 
-                learner = alg(part['train'])
+                learner = alg(partition.training_set)
                 learner.train()
-                learner.test(part['test'])
 
                 res.end_timer()
 
+                # calculate errors
+
+                train_error = learner.classifier.evaluate_solution(
+                    learner.solution
+                )
+                test_error = learner.test(partition.testing_set)
+
+                # set up Result
+
                 res.solution = learner.solution
+                res.train_error = train_error
+                res.test_error = test_error
 
                 if args.interactive:
                     print(res)
@@ -80,11 +91,14 @@ def main():
         f.write(str(results))
         f.close()
 
+
 if __name__ == '__main__':
-    prof = cProfile.Profile()
+    # prof = cProfile.Profile()
 
-    prof.enable()
+    # prof.enable()
+    # main()
+    # prof.disable()
+
+    # prof.print_stats(sort='time')
+
     main()
-    prof.disable()
-
-    prof.print_stats(sort='time')

@@ -32,13 +32,17 @@ class Result(object):
 
     def summary(self):
         return {
+            'indices': self.indices,
             'name': self.name,
+            'solution': self.solution.w.tolist(),
+            'test_error': self.test_error
             'time': self.exec_time,
-            'solution': (self.solution.w.tolist(), self.solution.error)
+            'train_error': self.train_error,
         }
 
     def __str__(self):
-        return json.dumps(self.summary(), indent=4)
+        return json.dumps(self.summary())
+
 
 class ResultsCollector(object):
     def __init__(self):
