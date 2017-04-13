@@ -130,7 +130,7 @@ class ACSGeneticAlgorithm(BaseAlgorithm, GeneticAlgorithmMixin, StationaryMixin)
 
         self.classifier = Classifier1NN(dataset)
         self.selection = BinaryTournamentSelectionOperator()
-        self.crossover = ArithmeticCrossoverOperator(probability=0.7, alpha=0.3)
+        self.crossover = ArithmeticCrossoverOperator(probability=1, alpha=0.3)
         self.mutation = NormalMutationOperator(probability=0.001, sigma=0.3)
 
 
@@ -158,5 +158,5 @@ class BLXSGeneticAlgorithm(BaseAlgorithm, GeneticAlgorithmMixin, StationaryMixin
 
         self.classifier = Classifier1NN(dataset)
         self.selection = BinaryTournamentSelectionOperator()
-        self.crossover = BlendAlphaCrossoverOperator(probability=0.7, alpha=0.3)
+        self.crossover = BlendAlphaCrossoverOperator(probability=1, alpha=0.3)
         self.mutation = NormalMutationOperator(probability=0.001, sigma=0.3)
