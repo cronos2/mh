@@ -25,9 +25,9 @@ class LocalSearchAlgorithm(BaseAlgorithm):
         self.max_evaluations = max_evaluations
         self.n_features = dataset.observations.shape[1]  # number of columns
         self.max_neighbours = attempts_per_gene * self.n_features
+        self.solution = Solution(np.random.rand(self.n_features))
 
     def train(self):
-        self.solution = Solution(np.random.rand(self.n_features))
         self.classifier.evaluate_solution(self.solution)
 
         current_evaluations = 0
