@@ -35,7 +35,7 @@ class Result(object):
             'indices': self.indices,
             'name': self.name,
             'solution': self.solution.w.tolist(),
-            'test_error': self.test_error
+            'test_error': self.test_error,
             'time': self.exec_time,
             'train_error': self.train_error,
         }
