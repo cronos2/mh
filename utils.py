@@ -150,3 +150,23 @@ class ResultsReporter(object):
 
         self._global_report = output
         return output
+
+    def boxplots(self, filename):
+        ordered_algs = [
+            'ReliefAlgorithm',
+            'LocalSearchAlgorithm',
+            'ACEGeneticAlgorithm',
+            'ACSGeneticAlgorithm',
+            'BLXEGeneticAlgorithm',
+            'BLXSGeneticAlgorithm',
+            'MemeticAlgorithmA',
+            'MemeticAlgorithmB',
+            'MemeticAlgorithmC',
+        ]
+
+        reduced_data = np.array([
+            [1 - res['test_error'] for res in self.results[alg]]
+              for alg in ordered_algs
+        ]).T
+
+        np.savetxt(filename, reduced_data)
