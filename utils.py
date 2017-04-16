@@ -63,13 +63,13 @@ class ResultsCollector(object):
 
 
 class ResultsReporter(object):
-    row_template = ','.join(
-            ['{row_name}'],     # title
-            ['{:.3f}'] * 3 * 3  # success rate (train+test) and time for each db
+    row_template = u','.join(
+            [u'{row_name}'] +    # title
+            [u'{:.3f}'] * 3 * 3  # success rate (train+test) and time for each db
         )
 
     def format_partition(self, i, j, *args, **kwargs):
-        row_name = 'Particón {i} - {j}'.format(i=i, j=j)
+        row_name = u'Partición {i} - {j}'.format(i=i, j=j)
 
         return self.row_template.format(row_name=row_name, *args, **kwargs)
 
@@ -80,14 +80,16 @@ class ResultsReporter(object):
         return self.row_template.format(row_name=algorithm, *args, **kwargs)
 
     def read(self, filename):
-        f = open(filename, 'rb')
+        f = open(filename, 'r')
         self.results = json.load(f)
         f.close()
 
     def report(self):
-        output = ''
+        output = u''
 
         for algorithm in self.results:
+            output += unicode(algorithm) + '\n'
+
             current_results = self.results[algorithm]
 
             sonar = current_results[:10]
@@ -106,8 +108,8 @@ class ResultsReporter(object):
                 ))
 
                 output += self.format_partition(
-                    i=quotient+1,
-                    j=remainder+1,
+                    quotient+1,  # i
+                    remainder+1, # j
                     *data
                 ) + '\n'
 
@@ -118,14 +120,15 @@ class ResultsReporter(object):
             ) for res in current_results]).reshape(3, 10, 3)  # db, part, metric
 
             means = np.mean(reduced_data, axis=1)  # by columns
-            output += self.format_means(means.flat)
+            output += self.format_means(*means.flat) + '\n\n'
+            output += str(np.mean(means[:, 1])) + '\n\n'
 
-        self.report = output
+        self._report = output
         return output
 
     def export(self, filename):
-        f = open(filename, 'wb')
-        f.write(self.report)
+        f = open(filename, 'w')
+        f.write(self._report.encode('utf-8'))
         f.close()
 
     def global_report(self):
@@ -143,6 +146,7 @@ class ResultsReporter(object):
         output = ''
 
         for algorithm, values in itertools.izip(algorithms, means):
-            output += self.format_algorithm(algorithm, values.flat)
+            output += self.format_algorithm(algorithm, *values.flat) + '\n'
 
+        self._global_report = output
         return output
