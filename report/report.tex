@@ -1,0 +1,775 @@
+\documentclass[11pt]{article}
+\renewcommand{\baselinestretch}{1.05}
+\usepackage[spanish]{babel}
+\usepackage[utf8]{inputenc}
+
+\usepackage{amsmath,amsthm,verbatim,amssymb,amsfonts,amscd, graphicx}
+\usepackage{graphics}
+\usepackage{pgfplots}
+\usepackage{multicol}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{listings}
+\usepackage[tablename=Tabla]{caption}
+\captionsetup[table]{skip=5pt}
+
+\setlength{\parindent}{0pt}
+\topmargin0.0cm
+\headheight0.0cm
+\headsep0.0cm
+\oddsidemargin0.0cm
+\textheight23.0cm
+\textwidth16.5cm
+\footskip1.0cm
+\theoremstyle{plain}
+
+\newtheorem{theorem}{Teorema}
+\newtheorem{corollary}{Corolario}
+\newtheorem{lemma}{Lema}
+\newtheorem{proposition}{Proposición}
+\theoremstyle{definition}
+\newtheorem{definition}{Definición}
+\newtheorem{example}{Ejemplo}
+
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\x}{\times}
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+
+\begin{document}
+
+\title{Metaheurísticas - Práctica 1.b \\
+  DGIIM}
+Técnicas de búsqueda basadas en poblaciones para el problema
+  del aprendizaje de pesos en características
+\date{}
+\author{Ignacio Mas Mesa (71967506T) --- nachomas\@correo.ugr.es --- 4 DGIIM}
+% TODO: algoritmos desarrolados
+
+\maketitle
+
+\tableofcontents
+
+\section{Descripción del problema}
+
+El aprendizaje de pesos en características (\textit{feature weight
+  learning}) es una técnica de aprendizaje automático empleada con
+clasificadores basados en similaridad. La idea principal es que
+cada observación consta, habitualmente, de "muchas" características,
+pero en principio no todas igual de importantes. \\
+
+
+Por ende, podría
+considerarse un tanto \textit{naïve} tratar de usar la distancia
+euclídea (se asume que el
+espacio muestral es euclídeo), considerando todas las características
+igualmente relevantes, a la hora de encontrar la(s) muestra conocida más
+semejante. Una posible mejora de esta aproximación sería asignarle un
+peso a cada característica, de modo que diferenciarse mucho en algunas
+de ellas tenga un impacto mucho mayor a la hora de clasificar; y lo
+contrario en otras. El problema, por tanto, es encontrar un algoritmo
+capaz de obtener un vector de pesos a partir de un conjunto de datos
+de entrenamiento ya clasificados. \\
+
+
+En nuestro caso, estudiaremos este problema empleando un clasificador
+$k$-NN (del inglés \textit{nearest neighbours}, vecinos más cercanos)
+con $k = 1$ (cf. diagrama de Voronoi). Es decir, ante una nueva muestra desconocida, se buscará
+la muestra conocida \textbf{más similar} a la dada, y la respuesta del
+clasificador será que pertenecen a la misma clase. El intríngulis aquí
+radica en determinar dicha similaridad, la cual se obtendrá mediante
+un vector de pesos de las características como el que mencionábamos previamente. \\
+
+Nótese, asimismo, que en nuestro estudio todas las características
+consideradas en los experimentos eran valores reales salvo,
+naturalmente, la clase. Sin embargo, esta técnica podría aplicarse de
+igual modo en características ordinales o nominales considerando otras distancias
+distintas como, por ejemplo, la de Hamming, la discreta, la de
+Levenshtein, etc. \\
+
+\section{Descripción de los algoritmos}
+
+Para este estudio hemos considerado diversos algoritmos de distintas
+naturalezas, aunque todos comparten aspectos comunes. Por ejemplo, las
+soluciones de todos ellos son, como se ha mecionado, vectores $\omega
+= (\omega_i : 1 \le i \le N), \omega_i \in [0, 1] \; \forall i$ (con
+$N$ el número de características de la muestra). Asimismo, la
+representación en memoria de las soluciones es, sencillamente, un
+\textit{array} de tamaño $N$ de \textit{floats} (números en coma flotante) entre $0$
+y $1$. \\
+
+Por otro lado, cada uno de estos algoritmos hace uso de un
+clasificador 1-NN con su correspondiente conjunto de datos de
+entrenamiento. La función objetivo de cada algoritmo es el error que
+se produce clasificando dicho conjunto con el clasificador 1-NN y el
+vector de pesos de características calculado. El pseudocódigo de este
+procedimiento es el siguiente: \\
+
+\begin{lstlisting}
+  train_error(w){  # w: vector de pesos
+    error = 0
+    distances = distance_matrix(sqrt(w) * dataset)
+    fill_diagonal(distances, NaN)  # rellena la diagonal con un valor no valido
+
+    for i=0 to N {
+      closest = argmin(distances[i])  # i-esima fila
+
+      if labels[i] != labels[closest] {
+        error += 1
+      }
+    }
+
+    return error / N
+  }
+\end{lstlisting}
+
+La función \texttt{sqrt} calcula la raíz cuadrada de cada elemento del
+vector. Multiplicamos ese vector, elemento a elemento, por cada vector
+de observación del conjunto de entrenamiento y calculamos la distancia
+entre cada pareja de vectores. Así \\
+
+$$ d(o_i, o_j) = \sqrt{\sum_{k=0}^N (\sqrt{w_k} * {o_i}_k -
+  \sqrt{w_k} * {o_j}_k)^2} = \sqrt{\sum_{k=0}^N w_k * ({o_i}_k -
+  {o_j}_k)^2} $$
+
+Nótese que este pseudocódigo difiere en cierto modo de la
+implementación real pues las operaciones se realizan vectorialmente
+para mejorar la eficiencia. Más adelante veremos que esto es
+importante ya que durante los experimentos más de la mitad del tiempo
+se emplea en esta función (en particular en el cálculo de distancias). \\
+
+\subsection{Operadores comunes}
+\subsubsection{Generación de vecino / mutación}
+
+\begin{lstlisting}
+  mutate(w, sigma, probability){
+    mutation = w
+    for gene=0 to N {
+      if random() < probability {
+        mutation[gene] += sigma * normal()
+      }
+    }
+
+    return normalize(mutation)
+  }
+
+  normalize(w){
+    w' = w
+    M = max(w)
+
+    for i=0 to N {
+      if w'[i] < 0 {
+        w'[i] = 0
+      } else {
+        w'[i] /= M
+      }
+    }
+
+    return w'
+  }
+\end{lstlisting}
+
+La mutación es un proceso aleatorio que se produce gen a gen (con probabilidad baja). La función \texttt{normal} devuelve
+una muestra extraída de una distribución $\mathcal{N}(0,
+1)$, multiplicar por $\sigma$ la convierte en una distribución
+$\mathcal{N}(0, \sigma^2)$ \\
+
+Respecto a la función \texttt{normalize}, se
+encarga de que las modificaciones realizadas mantengan la consistencia
+y no existan valores fuera del rango $[0, 1]$. \\
+
+\subsubsection{Operador de selección}
+
+El operador de selección en todos los algoritmos genéticos desarrollados es el
+torneo binario: \\
+
+\begin{lstlisting}
+  BinaryTournament(contestants){
+    return contestants[0] if fitness(contestants[0]) >
+            fitness(contestants[1]) else contestants[1]
+  }
+\end{lstlisting}
+
+La función recibe dos individuos candidatos y selecciona al mejor de ellos para formar parte de la
+población de padres de la siguiente generación. Igualmente válido, probablemente, habría sido realizar el sorteo entre la población (para encontrar la pareja a enfrentarse) dentro de la propia \texttt{BinaryTournament}, recibiendo como parámetro toda la población en lugar de los candidatos únicamente. Se ha escogido no hacerlo de ese modo porque el comportamiento del código está más implícito y podría ocasionar problemas de desarrollo. \\
+La diferencia entre
+los algoritmos generacionales o elitistas y los estacionarios es únicamente el número de veces que se aplica en cada generación. \\
+
+\subsubsection{Operadores de cruce}
+
+Se han desarrollado dos operadores de cruce distintos: el BLX-$\alpha$ \\
+y el cruce arimético:
+
+\begin{lstlisting}
+  BlendAlphaCrossover(parents, probability, alpha){
+    if random() < probability {
+      for i=0 to N {
+        m = min(parents[0][i], parents[1][i])
+        M = max(parents[0][i], parents[1][i])
+        I = M - m
+        h = random(m - I * alpha, M + I * alpha)
+        h' = random(m - I * alpha, M + I * alpha)
+        H_1[i] = h
+        H_2[i] = h'
+      }
+
+      return [H_1, H_2]
+    } else {
+      return parents
+    }
+  }
+
+  ArithmeticCrossover(parents, probability, alpha){
+    if random() < probability{
+      return alpha * parents + (1 - alpha) * reverse(parents)  # (*)
+    } else {
+      return parents
+    }
+  }
+\end{lstlisting}
+
+El funcionamiento del BLX-$\alpha$ es sencillo y viene explicado en
+las transparencias de teoría. La implementación es simplemente una
+versión vectorizada de este mismo algoritmo. \\
+
+El operador de cruce aritmético, sin embargo, sí que ha sido un tanto
+modificado. El principal motivo por el que se tomó esta decisión fue
+el tratar de mantener una coherencia entre los operadores de
+reproducción de modo que ambos devolvieran siempre dos hijos (o dos
+padres sin modificar si no se consuma). Sin embargo, devolver dos
+hijos iguales parecía ir en contra del espíritu de los algoritmos
+genéticos que es la diversidad en las soluciones (aunque se estaría
+repitiendo una mezcla entre dos \textit{buenas} soluciones
+existentes), por lo que se optó por hacer una media aritmética
+\textbf{ponderada} entre los padres. La línea marcada es un tanto
+críptica pero sería equivalente a
+
+\begin{lstlisting}
+  return [alpha * p1 + (1 - alpha) * p2, alpha * p2 + (1 - alpha) * p1]
+\end{lstlisting}
+
+con \texttt{p1} y \texttt{p2} los padres (vectores de \texttt{float}) y \texttt{alpha} un escalar. \\
+
+Ambos operadores son en
+realidad muy parecidos. Las principales diferencias entre ellos son el
+determinismo y el rango en el que se produce la descendencia. Para
+$\alpha \in [0, 1]$ (en los experimentos se ha usado $\alpha = 0.3$)
+el operador de cruce arimético es una función convexa y asegura que
+los hijos generados son siempre válidos. \\
+
+En el caso del BLX, sin
+embargo, no es así. Aunque podría optarse por normalizar las
+soluciones justo antes de devolverlas, hemos decidido dejar este paso
+para el proceso de mutación. En el BLX, el espacio comprendido entre
+los dos valores es espacio de \textit{explotación}, mientras que el
+espacio en los extremos es de \textit{exploración}. Esto
+cumple el mismo propósito que la mutación, por lo que dejamos que esta
+aplique antes de normalizar el vector de pesos.
+
+\subsection{Búsqueda local (\textit{local search})}
+
+\begin{lstlisting}
+  generate_neighbour(w, sigma, i){
+    neighbour = w
+    neighbour[i \% N] += sigma * normal()
+
+    return normalize(neighbour)
+  }
+
+  LS_train(){
+    current_evaluations = 1  # evaluacion de la solucion inicial
+    current_neighbours = 0
+    i = 0
+    solution = random(N)  # N numeros de una distribucion uniforme sobre [0, 1]
+
+    while (current_evaluations < max_evaluations and
+           current_neighbours < max_neighbours){
+      neighbour = generate_neighbour(solution, sigma, i)
+
+      if fitness(neighbour) > fitness(solution) {
+        solution = neighbour
+        current_neighbours = 0
+      } else {
+        current_neighbours += 1
+      }
+
+      current_evaluations += 1
+      i += 1
+    }
+  }
+\end{lstlisting}
+
+La función \texttt{generate\_neighbour} es bastante similar a \texttt{mutate}. La diferencia principal entre ellas es que esta \textbf{siempre} altera una componente, mientras que la otra puede alterar todas o ninguna. Además, con esta implementación, las modificaciones se realizan de forma cíclica sobre el vector de pesos, siempre en el mismo orden. \\
+
+En cuanto a la función \texttt{LS\_train}, es la encargada de obtener el vector solución. Se inicializan los contadores de evaluaciones y vecinos generados para mantener control sobre las condiciones de parada. Asimismo, se inicializa el vector solución inicial de forma aleatoria y el índice de modificación (\texttt{i}). \\
+
+En cada iteración, se genera un nuevo vecino con la función \texttt{generate\_neighbour} que acabamos de ver, y se comprueba si es mejor que la solución actual (siempre es la mejor encontrada por la naturaleza del método de búsqueda). En caso de serlo, se actualiza la solución actual a esta nueva y se reinicia el contador de vecinos generados. \\
+
+Nótese que una traducción directa de este pseudoćodigo a implementación sería \textbf{altamente ineficiente} debido a que se está calculando la función objetivo de la solución actual \textit{en cada iteración}, hasta un máximo de $20N$ veces. En el implementación real, sin embargo, este valor se almacena la primera vez que se calcula en un campo de la propia variable \texttt{solution} y la función \texttt{fitness} consulta, en las siguientes ejecuciones, esa caché. Esto justifica por qué en cada iteración se considera que se ha realizado \textbf{una única} evaluación adicional. \\
+
+Por último, es importante también que en el bucle ambas condiciones se comprueban en cada iteración, de modo que el algoritmo se detenda en cuanto \textbf{una} no se cumpla. \\
+
+\subsection{Algoritmos genéticos}
+\subsubsection{Esquema elitista}
+
+\begin{lstlisting}
+  generate_parents(){
+    parents = []
+
+    for i=0 to total_population {
+      parents.append(
+          BinaryTournament(sample(population, 2))
+      )
+    }
+
+    return parents
+  }
+
+  generate_population(offspring){
+    best = find_best(population)
+
+    if population[best] not in offspring{  # no sobrevive
+      worst = find_worst(offspring)
+      offspring[worst] = population[best]
+    }
+
+    population = offspring
+  }
+\end{lstlisting}
+
+La función \texttt{generate\_parents} toma tantas parejas (de individuos) como individuos tenga la población actual de forma aleatoria y deja que el torneo binario seleccione al padre, devolviendo una lista con todos los padres así obtenidos. \\
+
+\texttt{generate\_population}, por su parte, busca al mejor individuo de la población actual y al peor hijo engendrado y, en caso de ser uno mejor que el otro (y de no encontrarse ya el padre en la nueva generación, por ejemplo, porque no se haya reproducido sino que haya pasado directamente), lo conserva para mantener el elitismo. De este modo la mejor solución encontrada hasta el momento siempre se mantiene en la población. Finalmente se sustituye por completo la generación anterior por la nueva. \\
+
+\subsubsection{Esquema estacionario}
+\begin{lstlisting}
+  generate_parents(){
+    parents = []
+
+    for i=0 to 2 {
+      parents.append(
+          BinaryTournament(sample(population, 2))
+      )
+    }
+
+    return parents
+  }
+
+  generate_population(offspring){
+    sort(population, on=fitness)
+
+    contestants = concat(population[:2], offspring)  # dos peores + hijos
+    sort(contestants, on=fitness)
+
+    population[:2] = contestants[:2]
+  }
+\end{lstlisting}
+
+En el caso del esquema estacionario, la función \texttt{generate\_parents} es completamente análoga a la del caso elitista salvo por el número de padres que genera (2). \texttt{generate\_population}, sin embargo, sí es esencialmente distinta. En el pseudocódigo se ordena todo el vector de población en base a su \texttt{fitness}. Entran a \textit{concurso} los dos peores individuos de la población actual y los dos hijos engendrados. Se ordena de nuevo ese vector y los dos mejores de tal cruce sustituyen a los dos peores de la población actual. \\
+
+De nuevo, el pseudocódigo es terriblemente ineficiente porque está ordenando el vector de población entero cuando en realidad sólo queremos obtener los dos peores individuos. Lo mismo ocurre con el vector de contendientes, aunque de forma menos dramática (sólo 4 elementos). Es por esto que en la implementación real se ha usado una versión de \texttt{quickselect}, que sólo asegura que un cierto elemento (el segundo) está en su posición correcta, con todos los menores a la vanguardia y los mayores por detrás. \\
+
+\subsection{Algoritmos meméticos}
+
+El cuerpo de los tres algoritmos meméticos es el mismo. Todos cuentan con un algoritmo genético (\texttt{ga}) y un \textit{exploiter} (en nuestro caso siempre la búsqueda local). El pseudocódigo es como sigue: \\
+
+\begin{lstlisting}
+  AMtrain(){
+    current_evaluations = 0
+
+    while current_evaluations < max_evaluations {
+      configure_ga()
+      ga.train(max_generations=10)
+
+      current_evaluations += ga.current_evaluations
+
+      exploit()
+    }
+
+    solution = find_best(ga.population)
+    }
+  }
+\end{lstlisting}
+
+\texttt{configure\_ga} se encarga de reiniciar el estado del algoritmo genético para que vuelva a 0 su contador de evaluaciones. Además, el número máximo de evaluaciones se modifica para que sea el mínimo entre su número actual de máximo de evaluaciones y las \textit{evaluaciones restantes}, i.e., el máximo de evaluaciones del algoritmo memético menos las actuales. Se entrena al algoritmo genético durante una seria de generaciones y se actualizan las evaluaciones realizadas.
+
+La función \texttt{exploit} depende de cada versión del algoritmo memético y la estudiaremos por separado, pero, grosso modo, se encarga de ejecutar el \textit{exploiter} en ciertos individuos de la población del algoritmo genético (según la versión) y actualizarlos con las mejoras realizadas, además de actualizar el número de evaluaciones realizadas. \\
+
+\subsubsection{Algoritmo memético (10, 1)}
+
+\begin{lstlisting}
+  exploit(){
+    for i=0 to total_population {
+      configure_exploiter()
+      exploiter.set_initial_solution(ga.population[i])
+      exploiter.train()
+
+      current_evaluations += exploiter.current_evaluations
+      ga.population[i] = exploiter.solution
+    }
+  }
+\end{lstlisting}
+
+\texttt{configure\_exploiter} es completamente análoga a \texttt{configure\_ga}. Se ajusta la solución inicial de la búsqueda local con un individuo de la población genética y se procede a entrenar dicho algoritmo. Cuando termina se actualiza el individuo de la población con la mejora encontrada (modelo lamarkiano). \\
+
+\subsubsection{Algoritmo memético (10, 0.1)}
+
+\begin{lstlisting}
+  exploit(){
+    for _=0 to total_population / 10 {
+      configure_exploiter()
+      index = random(0, total_population)
+      exploiter.set_initial_solution(ga.population[index])
+      exploiter.train()
+
+      current_evaluations += exploiter.current_evaluations
+      ga.population[index] = exploiter.solution
+    }
+  }
+\end{lstlisting}
+
+La única diferencia con el caso anterior radica en el número de \textit{explotaciones}. \\
+
+\subsubsection{Algoritmo memético (10, 0.1mej)}
+
+\begin{lstlisting}
+  exploit(){
+    reverse(sort(ga.population, on=fitness))  # mejores al principio
+
+    for index=0 to total_population / 10 {
+      configure_exploiter()
+      exploiter.set_initial_solution(ga.population[index])
+      exploiter.train()
+
+      current_evaluations += exploiter.current_evaluations
+      ga.population[index] = exploiter.solution
+    }
+  }
+\end{lstlisting}
+
+Coincide en número con el anterior, difiere en mecanismo de selección.
+De nuevo, ordenar toda la población es innecesario y podemos recurrir a \texttt{quickselect}
+
+\subsection{Algoritmo de comparación (\texttt{RELIEF})}
+
+El algoritmo de comparación que se ha estudiado es el \texttt{RELIEF}, cuyo pseudocódigo es el siguiente:
+
+\begin{lstlisting}
+  split_datasets(){
+    condition = labels == labels[0]
+    A = observations[condition]
+    B = observations[~condition]  # (1)
+
+    distances = {
+      'AA': distance_matrix(A),
+      'BB': distance_matrix(B),
+      'AB': distance_matrix(A, B),  # (2)
+    }
+
+    fill_diagonal(distances['AA'], NaN)
+    fill_diagonal(distances['BB'], NaN)  # (3)
+  }
+
+  RELIEFtrain(){
+    closest_friends = {
+      'A': argmin(distances['AA']), # (4)
+      'B': argmin(distances['BB']),
+    }
+
+    closest_enemies = {
+      'AB': argmin(distances['AB']),
+      'BA': argmin(distances['AB'].T)  # (5)
+    }
+
+    solution = sum(abs(A - B[closest_enemies['AB']])) +  # (6)
+        sum(abs(B - A[closest_enemies['BA']])) -
+        sum(abs(A - A[closest_friends['A']])) -
+        sum(abs(B - B[closest_friends['B']]))
+
+    return normalize(solution)
+}
+\end{lstlisting}
+
+\texttt{split\_datasets} divide el conjunto de datos de entrenamiento en dos subconjuntos: los que pertenecen a la misma clase que la primera observación (\texttt{A}) y los que no (\texttt{B}) \texttt{[(1)]}. En esencia esto separa el conjunto de datos según la clase de cada observación (se asume que sólo hay dos clases). Después, se calcula la matriz de distancias de cada clase, i.e., de cada pareja de elementos de cierta clase. Después se calcula la matriz de distancias de cada observación en \texttt{A} a cada observación de \texttt{B} \texttt{[(2)]}. Finalmente se rellenan las diagones de \texttt{AA} y \texttt{BB} con valores no válidos. De este modo no se incluirá el 0 en la búsqueda del mínimo, necesario para el \textit{leave-one-out}. \texttt{[(3)]}. \\
+
+En \texttt{RELIEFtrain} se calculan los \textit{amigos} \texttt{[(4)]} y \textit{enemigos} \texttt{[(5)]} más cercanos de cada observación. Todo esto se realiza vectorialmente, de modo que, por ejemplo, \texttt{closest\_friends['A'][i]} se corresponde con el índice de la observación de \texttt{A} más cercana a la \texttt{i}-ésima, es decir, el índice del mínimo de \texttt{distances['AA'][i]}, que es el vector que contiene las distancias de la muestra \texttt{i}-ésima al resto. \\
+
+En el caso de los \textit{amigos} las matrices de distancias son simétricas, por lo que da igual cómo se recorran (se hace por filas). En el caso de los enemigos, sin embargo, no necesitamos calcular dos matrices de distancias, sino que una es la traspuesta de la otra. \texttt{[(5)]} \\
+
+Por último, se realizan las operaciones necesarias de suma y resta de componentes, de nuevo de forma vectorial; y se normaliza. La sintaxis de indexación en el ejemplo es muy similar a la de R, por ejemplo.
+
+\section{Experimentos y análisis de resultados}
+\subsection{Tablas de resultados}
+\subsubsection{Algoritmo \texttt{RELIEF}}
+
+\begin{table}[H]
+\centering
+\caption{Resultados obtenidos con el algoritmo \texttt{RELIEF}}
+\label{tbl-relief}
+\begin{tabular}{@{}crrrrrrrrr@{}}
+  \toprule
+  & \multicolumn{3}{c}{Sonar} & \multicolumn{3}{c}{Spambase} & \multicolumn{3}{c}{Wdbc}  \\
+  \cmidrule(r){2-10}
+           & \% train & \% test & time & \% train   & \% test   & time & \% train & \% test & time \\
+  \midrule
+Partición 1 - 1      & 0.894 & 0.865 & 0.010  & 0.909 & 0.857 & 0.030   & 0.954 & 0.944 & 0.029   \\
+Partición 1 - 2      & 0.875 & 0.875 & 0.012  & 0.865 & 0.861 & 0.034   & 0.933 & 0.965 & 0.032   \\
+Partición 2 - 1      & 0.865 & 0.856 & 0.012  & 0.857 & 0.839 & 0.034   & 0.972 & 0.965 & 0.032   \\
+Partición 2 - 2      & 0.846 & 0.817 & 0.012  & 0.878 & 0.852 & 0.033   & 0.905 & 0.968 & 0.031   \\
+Partición 3 - 1      & 0.875 & 0.865 & 0.011  & 0.865 & 0.874 & 0.033   & 0.944 & 0.961 & 0.031   \\
+Partición 3 - 2      & 0.817 & 0.817 & 0.012  & 0.887 & 0.839 & 0.034   & 0.951 & 0.961 & 0.031   \\
+Partición 4 - 1      & 0.894 & 0.808 & 0.012  & 0.848 & 0.826 & 0.034   & 0.954 & 0.951 & 0.031   \\
+Partición 4 - 2      & 0.837 & 0.846 & 0.012  & 0.861 & 0.848 & 0.034   & 0.933 & 0.958 & 0.031   \\
+Partición 5 - 1      & 0.875 & 0.837 & 0.012  & 0.904 & 0.852 & 0.033   & 0.965 & 0.940 & 0.033   \\
+Partición 5 - 2      & 0.827 & 0.837 & 0.012  & 0.852 & 0.878 & 0.034   & 0.951 & 0.954 & 0.031   \\
+  \bottomrule
+Media                & 0.861 & 0.842 & 0.011  & 0.873 & 0.853 & 0.033   & 0.946 & 0.957 & 0.031   \\
+\end{tabular}
+\end{table}
+
+\subsubsection{Algoritmo de búsqueda local}
+
+\begin{table}[H]
+\centering
+\caption{Resultados obtenidos con el algoritmo de búsqueda local}
+\label{tbl-ls}
+\begin{tabular}{@{}crrrrrrrrr@{}}
+  \toprule
+  & \multicolumn{3}{c}{Sonar} & \multicolumn{3}{c}{Spambase} & \multicolumn{3}{c}{Wdbc}  \\
+  \cmidrule(r){2-10}
+           & \% train & \% test & time & \% train   & \% test   & time & \% train & \% test & time \\
+  \midrule
+Partición 1 - 1      & 0.923 & 0.846 & 5.694  & 0.926 & 0.843 & 23.873  & 0.968 & 0.961 & 10.321  \\
+Partición 1 - 2      & 0.962 & 0.837 & 7.402  & 0.926 & 0.857 & 26.677  & 0.968 & 0.954 & 9.979   \\
+Partición 2 - 1      & 0.885 & 0.875 & 9.630  & 0.943 & 0.874 & 25.092  & 0.968 & 0.958 & 10.285  \\
+Partición 2 - 2      & 0.952 & 0.817 & 5.226  & 0.948 & 0.809 & 47.605  & 0.965 & 0.947 & 10.193  \\
+Partición 3 - 1      & 0.923 & 0.817 & 5.005  & 0.935 & 0.817 & 31.122  & 0.982 & 0.958 & 10.643  \\
+Partición 3 - 2      & 0.904 & 0.865 & 5.259  & 0.952 & 0.857 & 22.151  & 0.958 & 0.954 & 16.479  \\
+Partición 4 - 1      & 0.952 & 0.817 & 8.329  & 0.961 & 0.887 & 39.338  & 0.965 & 0.923 & 13.713  \\
+Partición 4 - 2      & 0.913 & 0.817 & 5.254  & 0.965 & 0.843 & 37.592  & 0.982 & 0.947 & 14.415  \\
+Partición 5 - 1      & 0.865 & 0.856 & 5.849  & 0.957 & 0.822 & 45.636  & 0.968 & 0.944 & 9.456   \\
+Partición 5 - 2      & 0.913 & 0.856 & 10.353 & 0.926 & 0.843 & 29.040  & 0.972 & 0.961 & 10.021  \\
+  \bottomrule
+Media                & 0.919 & 0.840 & 6.800  & 0.944 & 0.845 & 32.813  & 0.970 & 0.951 & 11.550  \\
+\end{tabular}
+\end{table}
+
+
+\subsubsection{Algoritmo genético \texttt{ACE}}
+
+\begin{table}[H]
+\centering
+\caption{Resultados obtenidos con el algoritmo genético \texttt{ACE}}
+\label{tbl-ace}
+\begin{tabular}{@{}crrrrrrrrr@{}}
+  \toprule
+  & \multicolumn{3}{c}{Sonar} & \multicolumn{3}{c}{Spambase} & \multicolumn{3}{c}{Wdbc}  \\
+  \cmidrule(r){2-10}
+           & \% train & \% test & time & \% train   & \% test   & time & \% train & \% test & time \\
+  \midrule
+Partición 1 - 1      & 0.856 & 0.817 & 65.633 & 0.913 & 0.796 & 221.257 & 0.968 & 0.961 & 214.567 \\
+Partición 1 - 2      & 0.904 & 0.817 & 65.405 & 0.891 & 0.852 & 221.164 & 0.972 & 0.944 & 212.982 \\
+Partición 2 - 1      & 0.875 & 0.894 & 65.374 & 0.943 & 0.857 & 220.812 & 0.954 & 0.951 & 214.419 \\
+Partición 2 - 2      & 0.865 & 0.865 & 65.422 & 0.896 & 0.852 & 220.605 & 0.996 & 0.958 & 213.248 \\
+Partición 3 - 1      & 0.846 & 0.865 & 65.393 & 0.909 & 0.830 & 220.607 & 0.972 & 0.968 & 215.270 \\
+Partición 3 - 2      & 0.904 & 0.808 & 65.433 & 0.917 & 0.852 & 220.602 & 0.972 & 0.926 & 213.951 \\
+Partición 4 - 1      & 0.913 & 0.856 & 65.370 & 0.935 & 0.822 & 220.625 & 0.947 & 0.979 & 215.002 \\
+Partición 4 - 2      & 0.923 & 0.779 & 65.433 & 0.887 & 0.813 & 221.089 & 0.986 & 0.961 & 213.122 \\
+Partición 5 - 1      & 0.885 & 0.817 & 65.850 & 0.930 & 0.830 & 221.232 & 0.982 & 0.937 & 214.446 \\
+Partición 5 - 2      & 0.942 & 0.808 & 65.689 & 0.900 & 0.830 & 221.313 & 0.972 & 0.944 & 213.167 \\
+  \bottomrule
+Media                & 0.891 & 0.833 & 65.500 & 0.912 & 0.833 & 220.931 & 0.972 & 0.953 & 214.017 \\
+\end{tabular}
+\end{table}
+
+\subsubsection{Algoritmo genético \texttt{ACS}}
+
+\begin{table}[H]
+\centering
+\caption{Resultados obtenidos con el algoritmo genético \texttt{ACS}}
+\label{tbl-acs}
+\begin{tabular}{@{}crrrrrrrrr@{}}
+  \toprule
+  & \multicolumn{3}{c}{Sonar} & \multicolumn{3}{c}{Spambase} & \multicolumn{3}{c}{Wdbc}  \\
+  \cmidrule(r){2-10}
+           & \% train & \% test & time & \% train   & \% test   & time & \% train & \% test & time \\
+  \midrule
+Partición 1 - 1      & 0.894 & 0.865 & 88.396 & 0.909 & 0.839 & 243.642 & 0.968 & 0.958 & 262.228 \\
+Partición 1 - 2      & 0.894 & 0.846 & 88.449 & 0.900 & 0.830 & 243.938 & 0.975 & 0.944 & 260.682 \\
+Partición 2 - 1      & 0.923 & 0.769 & 88.459 & 0.896 & 0.822 & 243.857 & 0.979 & 0.940 & 262.328 \\
+Partición 2 - 2      & 0.885 & 0.817 & 88.361 & 0.913 & 0.783 & 243.671 & 0.968 & 0.958 & 260.704 \\
+Partición 3 - 1      & 0.885 & 0.827 & 88.392 & 0.909 & 0.870 & 243.875 & 0.968 & 0.951 & 262.419 \\
+Partición 3 - 2      & 0.885 & 0.798 & 88.437 & 0.922 & 0.804 & 243.828 & 0.972 & 0.968 & 260.680 \\
+Partición 4 - 1      & 0.933 & 0.817 & 88.530 & 0.900 & 0.843 & 243.660 & 0.965 & 0.954 & 262.457 \\
+Partición 4 - 2      & 0.875 & 0.808 & 88.431 & 0.909 & 0.839 & 243.722 & 0.982 & 0.954 & 260.715 \\
+Partición 5 - 1      & 0.904 & 0.827 & 88.440 & 0.922 & 0.848 & 243.866 & 0.965 & 0.954 & 262.351 \\
+Partición 5 - 2      & 0.913 & 0.798 & 88.521 & 0.909 & 0.839 & 243.889 & 0.975 & 0.944 & 260.736 \\
+  \bottomrule
+Media                & 0.899 & 0.817 & 88.442 & 0.909 & 0.832 & 243.795 & 0.972 & 0.953 & 261.530 \\
+\end{tabular}
+\end{table}
+
+\subsubsection{Algoritmo genético \texttt{BLXE}}
+
+\begin{table}[H]
+\centering
+\caption{Resultados obtenidos con el algoritmo genético \texttt{BLXE}}
+\label{tbl-blxe}
+\begin{tabular}{@{}crrrrrrrrr@{}}
+  \toprule
+  & \multicolumn{3}{c}{Sonar} & \multicolumn{3}{c}{Spambase} & \multicolumn{3}{c}{Wdbc}  \\
+  \cmidrule(r){2-10}
+           & \% train & \% test & time & \% train   & \% test   & time & \% train & \% test & time \\
+  \midrule
+Partición 1 - 1      & 0.933 & 0.731 & 66.132 & 0.922 & 0.783 & 220.766 & 0.989 & 0.954 & 239.505 \\
+Partición 1 - 2      & 0.894 & 0.846 & 66.122 & 0.939 & 0.848 & 220.834 & 0.975 & 0.961 & 238.059 \\
+Partición 2 - 1      & 0.942 & 0.885 & 66.243 & 0.904 & 0.857 & 220.765 & 0.965 & 0.940 & 239.533 \\
+Partición 2 - 2      & 0.856 & 0.885 & 66.231 & 0.952 & 0.822 & 220.685 & 0.979 & 0.972 & 238.093 \\
+Partición 3 - 1      & 0.904 & 0.817 & 66.224 & 0.965 & 0.830 & 220.638 & 0.975 & 0.937 & 239.575 \\
+Partición 3 - 2      & 0.933 & 0.846 & 66.140 & 0.909 & 0.813 & 220.597 & 0.972 & 0.965 & 238.148 \\
+Partición 4 - 1      & 0.952 & 0.827 & 66.250 & 0.939 & 0.796 & 220.755 & 0.979 & 0.944 & 239.482 \\
+Partición 4 - 2      & 0.923 & 0.837 & 66.201 & 0.930 & 0.822 & 220.760 & 0.968 & 0.961 & 238.115 \\
+Partición 5 - 1      & 0.875 & 0.817 & 66.267 & 0.939 & 0.843 & 220.691 & 0.979 & 0.961 & 239.563 \\
+Partición 5 - 2      & 0.952 & 0.846 & 66.213 & 0.913 & 0.883 & 220.558 & 0.975 & 0.958 & 238.089 \\
+  \bottomrule
+Media                & 0.916 & 0.834 & 66.202 & 0.931 & 0.830 & 220.705 & 0.976 & 0.955 & 238.816 \\
+\end{tabular}
+\end{table}
+
+\subsubsection{Algoritmo genético \texttt{BLXS}}
+
+\begin{table}[H]
+\centering
+\caption{Resultados obtenidos con el algoritmo genético \texttt{BLXS}}
+\label{tbl-blxs}
+\begin{tabular}{@{}crrrrrrrrr@{}}
+  \toprule
+  & \multicolumn{3}{c}{Sonar} & \multicolumn{3}{c}{Spambase} & \multicolumn{3}{c}{Wdbc}  \\
+  \cmidrule(r){2-10}
+           & \% train & \% test & time & \% train   & \% test   & time & \% train & \% test & time \\
+  \midrule
+Partición 1 - 1      & 0.923 & 0.788 & 90.079 & 0.930 & 0.774 & 245.195 & 0.965 & 0.961 & 264.522 \\
+Partición 1 - 2      & 0.923 & 0.827 & 90.273 & 0.909 & 0.883 & 245.349 & 0.979 & 0.951 & 262.750 \\
+Partición 2 - 1      & 0.942 & 0.731 & 90.019 & 0.943 & 0.900 & 245.505 & 0.979 & 0.951 & 263.168 \\
+Partición 2 - 2      & 0.942 & 0.808 & 90.095 & 0.917 & 0.843 & 245.888 & 0.982 & 0.951 & 261.896 \\
+Partición 3 - 1      & 0.933 & 0.875 & 89.930 & 0.917 & 0.857 & 246.028 & 0.979 & 0.958 & 263.215 \\
+Partición 3 - 2      & 0.933 & 0.788 & 90.157 & 0.952 & 0.830 & 245.117 & 0.986 & 0.947 & 262.014 \\
+Partición 4 - 1      & 0.894 & 0.798 & 89.727 & 0.935 & 0.826 & 245.092 & 0.975 & 0.954 & 263.281 \\
+Partición 4 - 2      & 0.923 & 0.827 & 90.065 & 0.926 & 0.813 & 245.148 & 0.979 & 0.972 & 262.009 \\
+Partición 5 - 1      & 0.904 & 0.885 & 89.967 & 0.961 & 0.874 & 245.224 & 0.979 & 0.951 & 263.349 \\
+Partición 5 - 2      & 0.942 & 0.808 & 90.166 & 0.896 & 0.852 & 245.961 & 0.968 & 0.968 & 262.002 \\
+  \bottomrule
+Media                & 0.926 & 0.813 & 90.048 & 0.929 & 0.845 & 245.451 & 0.977 & 0.956 & 262.821 \\
+\end{tabular}
+\end{table}
+
+\subsubsection{Algoritmo memético (10, 1)}
+
+\begin{table}[H]
+\centering
+\caption{Resultados obtenidos con el algoritmo memético (10, 1)}
+\label{tbl-ama}
+\begin{tabular}{@{}crrrrrrrrr@{}}
+  \toprule
+  & \multicolumn{3}{c}{Sonar} & \multicolumn{3}{c}{Spambase} & \multicolumn{3}{c}{Wdbc}  \\
+  \cmidrule(r){2-10}
+           & \% train & \% test & time & \% train   & \% test   & time & \% train & \% test & time \\
+  \midrule
+Partición 1 - 1   & 0.990 & 0.856 & 57.583 & 0.957 & 0.878 & 210.670 & 0.986 & 0.944 & 202.246 \\
+Partición 1 - 2   & 0.913 & 0.856 & 57.445 & 0.948 & 0.826 & 210.397 & 0.979 & 0.954 & 200.920 \\
+Partición 2 - 1   & 0.933 & 0.846 & 57.314 & 0.935 & 0.861 & 210.538 & 0.989 & 0.947 & 202.296 \\
+Partición 2 - 2   & 0.904 & 0.788 & 57.340 & 0.922 & 0.870 & 210.414 & 0.982 & 0.954 & 200.980 \\
+Partición 3 - 1   & 0.962 & 0.885 & 57.410 & 0.961 & 0.848 & 210.412 & 0.979 & 0.954 & 202.332 \\
+Partición 3 - 2   & 0.904 & 0.827 & 57.300 & 0.952 & 0.826 & 210.314 & 0.982 & 0.954 & 200.899 \\
+Partición 4 - 1   & 0.962 & 0.788 & 57.363 & 0.943 & 0.830 & 210.388 & 0.989 & 0.944 & 202.287 \\
+Partición 4 - 2   & 0.942 & 0.827 & 57.383 & 0.917 & 0.852 & 210.391 & 0.975 & 0.954 & 200.985 \\
+Partición 5 - 1   & 0.942 & 0.846 & 57.460 & 0.957 & 0.835 & 210.370 & 0.993 & 0.965 & 202.252 \\
+Partición 5 - 2   & 0.933 & 0.827 & 57.417 & 0.939 & 0.891 & 210.259 & 0.965 & 0.951 & 201.020 \\
+  \bottomrule
+Media             & 0.938 & 0.835 & 57.401 & 0.943 & 0.852 & 210.415 & 0.982 & 0.952 & 201.622 \\
+\end{tabular}
+\end{table}
+
+\subsubsection{Algoritmo memético (10, 0.1)}
+
+\begin{table}[H]
+\centering
+\caption{Resultados obtenidos con el algoritmo memético (10, 0.1)}
+\label{tbl-amb}
+\begin{tabular}{@{}crrrrrrrrr@{}}
+  \toprule
+  & \multicolumn{3}{c}{Sonar} & \multicolumn{3}{c}{Spambase} & \multicolumn{3}{c}{Wdbc}  \\
+  \cmidrule(r){2-10}
+           & \% train & \% test & time & \% train   & \% test   & time & \% train & \% test & time \\
+  \midrule
+Partición 1 - 1   & 0.933 & 0.865 & 58.784 & 0.939 & 0.822 & 206.723 & 0.989 & 0.961 & 199.577 \\
+Partición 1 - 2   & 0.923 & 0.846 & 58.806 & 0.948 & 0.865 & 206.894 & 0.968 & 0.961 & 198.348 \\
+Partición 2 - 1   & 0.952 & 0.817 & 58.825 & 0.965 & 0.783 & 206.820 & 0.982 & 0.958 & 199.518 \\
+Partición 2 - 2   & 0.923 & 0.798 & 58.782 & 0.961 & 0.857 & 206.739 & 0.972 & 0.961 & 198.380 \\
+Partición 3 - 1   & 0.933 & 0.788 & 58.785 & 0.943 & 0.861 & 206.826 & 0.975 & 0.951 & 199.627 \\
+Partición 3 - 2   & 0.913 & 0.865 & 58.763 & 0.952 & 0.883 & 206.809 & 0.979 & 0.965 & 198.200 \\
+Partición 4 - 1   & 0.923 & 0.837 & 58.818 & 0.952 & 0.857 & 206.837 & 0.979 & 0.958 & 199.748 \\
+Partición 4 - 2   & 0.923 & 0.769 & 58.837 & 0.922 & 0.839 & 206.752 & 0.979 & 0.947 & 198.242 \\
+Partición 5 - 1   & 0.923 & 0.894 & 58.765 & 0.957 & 0.852 & 206.754 & 0.986 & 0.951 & 199.595 \\
+Partición 5 - 2   & 0.971 & 0.808 & 58.788 & 0.943 & 0.791 & 206.773 & 0.972 & 0.982 & 198.258 \\
+  \bottomrule
+Media             & 0.932 & 0.829 & 58.795 & 0.948 & 0.841 & 206.793 & 0.978 & 0.960 & 198.949 \\
+\end{tabular}
+\end{table}
+
+\subsubsection{Algoritmo memético (10, 0.1mej)}
+
+\begin{table}[H]
+\centering
+\caption{Resultados obtenidos con el algoritmo memético (10, 0.1mej)}
+\label{tbl-amc}
+\begin{tabular}{@{}crrrrrrrrr@{}}
+  \toprule
+  & \multicolumn{3}{c}{Sonar} & \multicolumn{3}{c}{Spambase} & \multicolumn{3}{c}{Wdbc}  \\
+  \cmidrule(r){2-10}
+           & \% train & \% test & time & \% train   & \% test   & time & \% train & \% test & time \\
+  \midrule
+Partición 1 - 1   & 0.952 & 0.798 & 59.027 & 0.935 & 0.870 & 207.276 & 0.975 & 0.954 & 199.514 \\
+Partición 1 - 2   & 0.942 & 0.885 & 58.977 & 0.943 & 0.843 & 207.128 & 0.986 & 0.958 & 198.318 \\
+Partición 2 - 1   & 0.962 & 0.779 & 59.038 & 0.930 & 0.835 & 207.300 & 0.965 & 0.954 & 199.427 \\
+Partición 2 - 2   & 0.933 & 0.798 & 59.023 & 0.952 & 0.778 & 207.230 & 0.986 & 0.933 & 198.364 \\
+Partición 3 - 1   & 0.952 & 0.788 & 58.998 & 0.965 & 0.839 & 207.322 & 0.993 & 0.958 & 199.558 \\
+Partición 3 - 2   & 0.894 & 0.904 & 59.065 & 0.926 & 0.891 & 207.262 & 0.968 & 0.958 & 198.369 \\
+Partición 4 - 1   & 0.875 & 0.846 & 58.964 & 0.943 & 0.843 & 207.291 & 0.972 & 0.954 & 199.574 \\
+Partición 4 - 2   & 0.875 & 0.846 & 59.086 & 0.913 & 0.791 & 207.246 & 0.975 & 0.916 & 198.302 \\
+Partición 5 - 1   & 0.933 & 0.817 & 58.973 & 0.943 & 0.826 & 207.308 & 0.982 & 0.951 & 199.567 \\
+Partición 5 - 2   & 0.933 & 0.817 & 59.742 & 0.896 & 0.822 & 207.210 & 0.972 & 0.958 & 198.276 \\
+  \bottomrule
+Media             & 0.925 & 0.828 & 59.089 & 0.935 & 0.834 & 207.257 & 0.978 & 0.949 & 198.927 \\
+\end{tabular}
+\end{table}
+
+\subsubsection{Resultados globales}
+
+\begin{table}[H]
+\centering
+\caption{Resultados globales}
+\label{tbl-glob}
+\begin{tabular}{@{}crrrrrrrrr@{}}
+  \toprule
+  & \multicolumn{3}{c}{Sonar} & \multicolumn{3}{c}{Spambase} & \multicolumn{3}{c}{Wdbc}  \\
+  \cmidrule(r){2-10}
+           & \% train & \% test & time & \% train   & \% test   & time & \% train & \% test & time \\
+  \midrule
+\texttt{RELIEF}      & 0.861 & 0.842 & 0.011  & 0.873 & 0.853 & 0.033   & 0.946 & 0.957 & 0.031   \\
+Local Search & 0.919 & 0.840 & 6.800  & 0.944 & 0.845 & 32.813  & 0.970 & 0.951 & 11.550  \\
+\texttt{ACE} AG & 0.891 & 0.833 & 65.500 & 0.912 & 0.833 & 220.931 & 0.972 & 0.953 & 214.017 \\
+\texttt{ACS} AG & 0.899 & 0.817 & 88.442 & 0.909 & 0.832 & 243.795 & 0.972 & 0.953 & 261.530 \\
+\texttt{BLXE} AG & 0.916 & 0.834 & 66.202 & 0.931 & 0.830 & 220.705 & 0.976 & 0.955 & 238.816 \\
+\texttt{BLXS} AG & 0.926 & 0.813 & 90.048 & 0.929 & 0.845 & 245.451 & 0.977 & 0.956 & 262.821 \\
+Memetic (10, 1) & 0.938 & 0.835 & 57.401 & 0.943 & 0.852 & 210.415 & 0.982 & 0.952 & 201.622 \\
+Memetic (10, 0.1) & 0.932 & 0.829 & 58.795 & 0.948 & 0.841 & 206.793 & 0.978 & 0.960 & 198.949 \\
+Memetic (10, 0.1mej) & 0.925 & 0.828 & 59.089 & 0.935 & 0.834 & 207.257 & 0.978 & 0.949 & 198.927 \\
+  \bottomrule
+\end{tabular}
+\end{table}
+
+\end{document}
