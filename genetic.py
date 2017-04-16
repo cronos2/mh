@@ -5,10 +5,12 @@ from core import Solution
 
 class BinaryTournamentSelectionOperator(object):
     def select(self, chromosomes):
-        # this expects all candidates to be evaluated (!)
+        '''
+        This expects TWO chromosomes. They should be evaluated.
+        Warning: will work otherwise, but my lead to logic errors
+        '''
 
-        candidates = np.random.choice(chromosomes, 2)
-        return np.min(candidates)  # less error
+        return np.min(chromosomes)  # less error
 
 
 class BlendAlphaCrossoverOperator(object):
