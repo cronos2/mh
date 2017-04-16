@@ -1,4 +1,4 @@
-{'ReliefAlgorithm': [
+{"ReliefAlgorithm": [
     {
         "solution": [
             [
@@ -1739,7 +1739,7 @@
         "name": "wdbc - 9", 
         "time": 0.06808299999999967
     }
-], 'ACEGeneticAlgorithm': [
+], "ACEGeneticAlgorithm": [
     {
         "solution": [
             [
@@ -3480,7 +3480,7 @@
         "name": "wdbc - 9", 
         "time": 248.6269569999995
     }
-], 'BLXSGeneticAlgorithm': [
+], "BLXSGeneticAlgorithm": [
     {
         "solution": [
             [
@@ -5221,7 +5221,7 @@
         "name": "wdbc - 9", 
         "time": 256.4244639999997
     }
-], 'ACSGeneticAlgorithm': [
+], "ACSGeneticAlgorithm": [
     {
         "solution": [
             [
@@ -6962,7 +6962,7 @@
         "name": "wdbc - 9", 
         "time": 256.1322250000012
     }
-], 'LocalSearchAlgorithm': [
+], "LocalSearchAlgorithm": [
     {
         "solution": [
             [
@@ -8703,7 +8703,7 @@
         "name": "wdbc - 9", 
         "time": 8.771154000000024
     }
-], 'BLXEGeneticAlgorithm': [
+], "BLXEGeneticAlgorithm": [
     {
         "solution": [
             [
