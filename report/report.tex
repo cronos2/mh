@@ -10,6 +10,7 @@
 \usepackage{booktabs}
 \usepackage{float}
 \usepackage{listings}
+\usepackage{url}
 \usepackage[tablename=Tabla]{caption}
 \captionsetup[table]{skip=5pt}
 
@@ -43,21 +44,38 @@
 
 \title{Metaheurísticas - Práctica 1.b \\
   DGIIM}
-Técnicas de búsqueda basadas en poblaciones para el problema
-  del aprendizaje de pesos en características
+
 \date{}
 \author{Ignacio Mas Mesa (71967506T) --- nachomas\@correo.ugr.es --- 4 DGIIM}
 % TODO: algoritmos desarrolados
 
-\maketitle
+\begin{titlepage}
+	\centering
+	{\scshape\LARGE Universidad de Granada \par}
+	\vspace{1cm}
+	{\scshape\Large Metaheurísticas \par}
+	\vspace{1.5cm}
+	{\huge\bfseries Práctica 1.b \par}
+	\vspace{1cm}
+	{\Large\itshape Técnicas de búsqueda basadas en poblaciones para el problema
+  del aprendizaje de pesos en características \par}
+	\vfill
+
+        Ignacio Mas Mesa --- 71967506T \\
+        nachomas@correo.ugr.es
+	\vfill
+
+% Bottom of the page
+	{\large \today\par}
+      \end{titlepage}
 
 \tableofcontents
 
 \section{Descripción del problema}
 
 El aprendizaje de pesos en características (\textit{feature weight
-  learning}) es una técnica de aprendizaje automático empleada con
-clasificadores basados en similaridad. La idea principal es que
+  learning} \cite{svm}) es una técnica de aprendizaje automático empleada con
+clasificadores basados en similaridad \cite{similarity}. La idea principal es que
 cada observación consta, habitualmente, de "muchas" características,
 pero en principio no todas igual de importantes. \\
 
@@ -142,7 +160,7 @@ importante ya que durante los experimentos más de la mitad del tiempo
 se emplea en esta función (en particular en el cálculo de distancias). \\
 
 \subsection{Operadores comunes}
-\subsubsection{Generación de vecino / mutación}
+\subsubsection{Operador de mutación}
 
 \begin{lstlisting}
   mutate(w, sigma, probability){
@@ -451,7 +469,7 @@ La única diferencia con el caso anterior radica en el número de \textit{explot
 \end{lstlisting}
 
 Coincide en número con el anterior, difiere en mecanismo de selección.
-De nuevo, ordenar toda la población es innecesario y podemos recurrir a \texttt{quickselect}
+De nuevo, ordenar toda la población es innecesario y podemos recurrir a \texttt{quickselect} \\
 
 \subsection{Algoritmo de comparación (\texttt{RELIEF})}
 
@@ -499,9 +517,124 @@ En \texttt{RELIEFtrain} se calculan los \textit{amigos} \texttt{[(4)]} y \textit
 
 En el caso de los \textit{amigos} las matrices de distancias son simétricas, por lo que da igual cómo se recorran (se hace por filas). En el caso de los enemigos, sin embargo, no necesitamos calcular dos matrices de distancias, sino que una es la traspuesta de la otra. \texttt{[(5)]} \\
 
-Por último, se realizan las operaciones necesarias de suma y resta de componentes, de nuevo de forma vectorial; y se normaliza. La sintaxis de indexación en el ejemplo es muy similar a la de R, por ejemplo.
+Por último, se realizan las operaciones necesarias de suma y resta de
+componentes, de nuevo de forma vectorial; y se normaliza. La sintaxis
+de indexación en el ejemplo es muy similar a la de R, por ejemplo. \\
+
+\section{Desarrollo e implementación}
+
+El código desarrollado para los experimentos se ha escrito íntegramente en Python (\texttt{v2.7.x}) desde cero. Además de esto se han empleado tres paquetes disponibles en PyPI (\textit{Python Package Index}) \cite{pypi}:
+
+\begin{description}
+\item[liac-arff] Lectura/escritura de archivos ARFF \cite{arff}
+\item[numpy] Paquete \textit{de facto} para cálculo numérico en Python. Cuenta con bindings a binarios precompilados escritos en C que reducen drásticamente el \textit{overhead} que introduce Python, por su naturaleza, en los cómputos. Soporta cálculos vectoriales de forma muy natural. \cite{numpy}
+\item[scipy] Proyecto para cálculo científico más general. NumPy es un subproyecto de SciPy \cite{scipy}, que contiene otros proyectos notables en la comunidad de Python como SymPy \cite{sympy} (cálculo simbólico) o Matplotlib \cite{matplotlib} (\textit{plots} 2D y 3D)
+\end{description}
+
+Para reproducir los experimentos será necesario tener instalado el intérprete de Python \cite{cpython} y los paquetes mencionados. Una vez satisfechos estos requisitos simplemente restará ejecutar, en el directorio de fuentes, el comando \texttt{python main.py [-i] [-o filename]}. El programa acepta dos opciones:
+
+\begin{description}
+\item[\texttt{-i}] Muestra el progreso del programa
+\item[\texttt{-o}] Permite especificar una ruta (\texttt{filename}) donde guardar los resultados en formato JSON
+\end{description}
+
+Los resultados de cada experimento se han exportado, tras su obtención, a un archivo en disco en formato JSON \cite{json} para su posterior análisis. Estos archivos se pueden encontrar en el directorio \texttt{results}. Cada uno de ellos tiene estructura de diccionario, de forma que a cada algoritmo (la clave es su nombre) se le asigna una lista con los resultados de todas las ejecuciones (según partición y base de datos). Cada una de estos resultados de ejecuciones es, de nuevo, un diccionario con la siguiente estructura:
+
+\begin{description}
+\item[name] Nombre de la partición. El formato es \texttt{\{database\} - \{partition\}}
+\item[solution] Vector solución.
+\item[time] Tiempo de ejecución del algoritmo (sólo entrenamiento). Tiempo en CPU, \textbf{no} \textit{wall-clock time}.
+\item[train\_error] Error con el conjunto de datos de entrenamiento (entre 0 y 1)
+\item[test\_error] Error con el conjunto de datos de prueba
+\item[indices] \hfill
+  \begin{description}
+  \item[training] Índices de las observaciones usadas en el conjunto de entrenamiento (0-\textit{based})
+  \item[testing] Índices de las observaciones usadas en el conjunto de prueba (0-\textit{based})
+  \end{description}
+\end{description}
+
+Los datos \texttt{train\_error}, \texttt{test\_error} y \texttt{time} se exportan también a archivos CSV (\textit{comma separated values}) para poder obtener las tablas que veremos a continuación automáticamente. \\
+
+En cuanto al diseño del código, se ha tratado de conseguir que fuera general y lo más agnóstico de las peculiaridades de esta práctica concreta posible para que resulte fácilmente reutilizable/adaptable en caso de resultar necesario. La implementación de funcionalidades se ha basado en clases y herencia múltiple (q.v. \textit{mixins}) y polimorfismo, explotando dos de las características más apreciadas de Python. Por supuesto esto no siempre se ha conseguido (la implementación de los algoritmos meméticos y de las condiciones de parada de los distintos algoritmos podría refinarse bastante) pero se considera que la calidad del código es adecuada para una versión inicial. Se ha tratado además de añadir comentarios a menudo para que pueda ser analizado por otros desarrolladores si fuera preciso. \\
+
+Por último, se ha empleado el profiler nativo de Python \cite{cprofile} para estudiar el curso de las ejecuciones y el reparto del tiempo de ejecución entre las distintas partes del código, de modo que las posibles optimizaciones tuvieran un impacto significativo (q.v. ley de Amdahl). Al tratarse de un \textit{profiler} determinista en lugar de estadístico el número de llamadas de ciertas funciones ha permitido, además, detectar algunos \textit{bugs}. Aun así es bastante probable que el código todavía contenga errores lógicos que no producen excepciones en tiempo de ejecución (al menos en los experimentos realizados), que requerirían un estudio más profundo y probablemente refactorizaciones para simplificar el flujo del programa.
 
 \section{Experimentos y análisis de resultados}
+\subsection{Consideraciones generales sobre los experimentos}
+
+Para los experimentos realizados se han desarrollado un total de nueve algoritmos, si se quiere, distintos: un algoritmo de comparación (\texttt{RELIEF}), uno basado en entornos (búsqueda local), cuatro genéticos y tres meméticos. La semilla del generador de números pseudoaleatorios (\textit{PRNG}) se ha inicializado siempre a 0. \\
+
+Los parámetros de la búsqueda local (como algoritmo \textit{standalone}) han sido los siguientes:
+
+\begin{description}
+\item[Número máximo de evaluaciones] 15000
+\item[Número máximo de vecinos generados (sin mejora)] $20N$
+\end{description}
+
+Con $N$ el número de características consideradas en el experimento. \\
+
+Por su parte, cada algoritmo genético es una combinación distinta de dos posibles características:
+
+\begin{description}
+\item[Esquema evolutivo] Generacional elitista (de ahora en adelante \texttt{E}) o estacionario (de ahora en adelante \texttt{S})
+\item[Operador de cruce] BLX-$\alpha$ (de ahora en adelante \texttt{BLX}) o cruce arimético (de ahora en adelante \texttt{AC})
+\end{description}
+
+En las ejecuciones se han considerado los siguientes parámetros:
+
+\begin{description}
+\item[ACE] \hfill
+  \begin{description}
+  \item[$\alpha$] 0.3
+  \item[Probabilidad de cruce] 0.7
+  \end{description}
+\item[ACS] \hfill
+  \begin{description}
+  \item[$\alpha$] 0.3
+  \item[Probabilidad de cruce] 1
+  \end{description}
+\item[BLXE] \hfill
+  \begin{description}
+  \item[$\alpha$] 0.3
+  \item[Probabilidad de cruce] 0.7
+  \end{description}
+\item[BLXS] \hfill
+  \begin{description}
+  \item[$\alpha$] 0.3
+  \item[Probabilidad de cruce] 1
+  \end{description}
+\end{description}
+
+El número de cromosomas se ha establecido siempre en 30 y el número máximo de evaluaciones de la función objetivo en 15000. \\
+
+En cuanto a los algoritmos meméticos, se han desarrollado tres (basándose todos en el \texttt{ACE} y la búsqueda local) con los siguientes parámetros:
+
+\begin{description}
+
+\item[AM (10, 1)] Cada diez generaciones del algoritmo genético ejecutar el \textit{exploiter} sobre \textbf{toda} la población del algoritmo genético.
+\item[AM (10, 0.1)] Cada diez generaciones del algoritmo genético ejecutar el \textit{exploiter} sobre un \textbf{10\%} (seleccionado aleatoriamente) de la población del algoritmo genético.pp
+\item[AM (10, 0.1mej)] Cada diez generaciones del algoritmo genético ejecutar el \textit{exploiter} sobre el \textbf{10\% de los mejores individuos} de la población del algoritmo genético.
+\end{description}
+
+Asimismo, la configuración de los algoritmos usados por los meméticos ha sido:
+
+\begin{description}
+\item[Algoritmo genético] ACE
+  \begin{description}
+  \item[Cromosomas] 10
+  \item[Número máximo de generaciones] 10
+  \end{description}
+\item[\textit{Exploiter}] Búsqueda local
+  \begin{description}
+  \item[Número máximo de evaluaciones] 1500
+  \item[Número máximo de vecinos generados (sin mejora)] $2N$
+  \end{description}
+\end{description}
+
+De nuevo, el número máximo de evaluaciones de la función objetivo \textit{global} en cada algoritmo ha sido 15000. \\
+
+Finalmente, se han empleado los tres conjuntos de datos sugeridos en el guion de prácticas (Sonar, Spambase y Wdbc). Cada algoritmo se ha ejecutado sobre los tres conjuntos, diez veces por cada uno (siguiendo el $5 \times 2$ \textit{cross-validation}). A continuación veremos el desglose de los resultados obtenidos.
+
 \subsection{Tablas de resultados}
 \subsubsection{Algoritmo \texttt{RELIEF}}
 
@@ -772,4 +905,94 @@ Memetic (10, 0.1mej) & 0.925 & 0.828 & 59.089 & 0.935 & 0.834 & 207.257 & 0.978 
 \end{tabular}
 \end{table}
 
+\subsection{Análisis de resultados}
+Debido a la gran cantidad de datos obtenidos no resulta trivial hacer un análisis general de los resultados. La tabla con resultados globales muestra que, en media, todos los algoritmos considerados tienen aproximadamente la misma tasa de acierto en los conjuntos de prueba, variando esta entre las distintas bases de datos. Wdbc es claramente la que produce mejores resultados, lo cual probablemente se deba a que los datos son \textit{mucho más} separables que en los otros dos casos. \\
+
+También podemos notar que, aunque las diferencias son casi insignificantes, por lo general las variantes elitistas se comportan mejor que las estacionarias y el operador de cruce BLX mejor que el cruce arimético. Un análisis estadístico más pormenorizado permitiría descubrir si las diferencias son significativas o no, pero lo cierto es que son lo suficientemente pequeñas como para descartarlo. Se necesitarían más conjuntos de datos (o más grandes) para poder sacar conclusiones. \\
+
+Una posible justificación de este hecho, sin embargo, si es que fuera cierto, sería que tanto la versión elitista como el cruce BLX introducen más variedad en la población. Llaman poderosamente la atención los buenos resultados obtenidos por el que, se supone, era el algoritmo de comparación (\texttt{RELIEF}); que de hecho obtiene, en media, los mejores resultados en dos de las bases de datos. Esto puede indicar que los conjuntos de datos considerados son muy pequeños, por lo que:
+
+\begin{enumerate}
+\item Los datos no tienen la suficiente varianza como para poner de relieve las carencias de \texttt{RELIEF}
+\item El resto de algoritmos están acusando un cierto \textit{overfitting} en los conjuntos de entrenamiento
+\end{enumerate}
+
+De nuevo, una posible solución a este problema sería aumentar el número de observaciones en las bases de datos, así como disminuir el número máximo de evaluaciones para detener antes el entrenamiento. Por supuesto se trata de cábalas y requerirían de un estudio empírico para constatar su veracidad, aunque no parecen carentes de sentido. \\
+
+En el caso de los meméticos nos encontramos una situación similar, con pocas diferencias entre las distintas versiones (y con el resto de algoritmos). Quizá podría ser relevante que la versión (10, 0.1mej) es, con cierta sorpresa, la que peores resultados obtiene. Una vez más esto podría deberse a que se promociona mucho al mejor 10\% de soluciones de la población, de modo que la variación introducida por el algoritmo genético no puede competir y se crean así dos estamentos bien diferenciados. Sin embargo, no merece la pena aventurarse tanto innecesariamente sin más respaldo para esta hipótesis. \\
+
+Respecto a la distribución del acierto en los distintos experimentos, puede observarse un resumen en el siguiente boxplot:
+
+\begin{figure}[H]
+\centering
+\includegraphics[scale=0.7]{boxplot_test.png}
+\caption{Distribución de la tasa de acierto en los distintos experimentos}
+\label{fig:boxplot}
+\end{figure}
+
+Volvemos a apreciar en la Figura \ref{fig:boxplot} que las diferencias en los resultados obtenidos por los distintos algoritmos son mínimas. Las medianas de todos ellos se situan en torno al 86-87 \%. Notamos también la poca dispersión que presenta la búsqueda local y, por contraposición, los dos algoritmos genéticos con BLX. Esto se debe, probablemente, a los principios opuestos de explotación/exploración que representa cada uno. \\
+
+Por supuesto, la tasa de acierto en los conjuntos de entrenamiento es significativamente mayor que en los conjuntos de prueba, como cabía esperar, aunque quizá no lo suficiente como para demostrar el \textit{overfitting}. \\
+
+En cuanto a los tiempos de ejecución, el algoritmo \texttt{RELIEF} es sin ninguna duda el vencedor indiscutible, varios órdenes de magnitud por debajo de la búsqueda local, su competidora más directa. \\
+
+La gran diferencia entre la búsqueda local y el resto de algoritmos puede explicarse por la condición de parada adicional de los vecinos generados. Esto hace que el algoritmo pueda detenerse sin haber realizado las 15000 evaluaciones máximas, sin duda lo más costoso. Se colige, por tanto, que la función objetivo sobre los conjuntos de datos considerados tiene un gran número de mínimos locales en los que la búsqueda local se queda atrapada. Por ende, quizá, a costa de reducir la diferencia en tiempo de ejecución, un enfriamiento simulado (\textit{simulated annealing}) habría sido una mejor opción. \\
+
+Por último, llaman también la atención las diferencias casi constantes de unos 20-30 segundos entre las versiones elitistas y las estacionarias. Esto, quizá, se debe al sobrecoste de tener que encontrar las dos peores soluciones de la población en cada iteración, o quizá se trata de algún error en el código que no ha podido detectarse. \\
+
+\begin{thebibliography}{99}
+\bibitem{svm}
+  Improving SVM Classification by Feature Weight Learning, \\
+  \textit{Tinghua Wang}, 2009 \\
+  \url{http://ieeexplore.ieee.org/document/5523440/keywords}
+
+\bibitem{similarity}
+  Similarity-based Classification: Concepts and Algorithms, \\
+  \textit{Chen, García, Gupta, Rahimi \& Cazzanti}, 2009 \\
+  \url{http://ieeexplore.ieee.org/document/5523440/keywords}
+
+\bibitem{pypi}
+  PyPI, \textit{Python Package Index},
+  \url{https://pypi.python.org/pypi}
+
+\bibitem{arff}
+  \url{https://pypi.python.org/pypi/liac-arff}
+
+\bibitem{numpy}
+  NumPy,
+  \url{http://www.numpy.org/}
+
+\bibitem{scipy}
+  SciPy,
+  \url{https://scipy.org/}
+
+\bibitem{sympy}
+  SymPy,
+  \url{http://www.sympy.org/en/index.html}
+
+\bibitem{matplotlib}
+  Matplotlib,
+  \url{http://matplotlib.org/}
+
+\bibitem{cpython}
+  CPython 2.7.11,
+  \url{https://www.python.org/downloads/release/python-2711/}
+
+\bibitem{pip}
+  pip, \textit{The PyPA recommended tool for installing Python packages},
+  \url{https://pypi.python.org/pypi/pip}
+
+\bibitem{json}
+  JSON,
+  \url{http://www.json.org/}
+
+\bibitem{cprofile}
+  The Python Profilers, \texttt{profile} and \texttt{cProfile} Module Reference,
+  \url{https://docs.python.org/2/library/profile.html#module-cProfile}
+\end{thebibliography}
 \end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:
