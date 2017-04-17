@@ -2,6 +2,7 @@
 
 import argparse
 import cProfile
+import json
 import numpy as np
 
 from algorithms import (
@@ -38,12 +39,12 @@ def main():
 
     databases = ['sonar', 'spambase', 'wdbc']
     algorithms = [
-        # ReliefAlgorithm,
-        # LocalSearchAlgorithm,
-        # ACEGeneticAlgorithm,
-        # ACSGeneticAlgorithm,
-        # BLXEGeneticAlgorithm,
-        # BLXSGeneticAlgorithm,
+        ReliefAlgorithm,
+        LocalSearchAlgorithm,
+        ACEGeneticAlgorithm,
+        ACSGeneticAlgorithm,
+        BLXEGeneticAlgorithm,
+        BLXSGeneticAlgorithm,
         MemeticAlgorithmA,
         MemeticAlgorithmB,
         MemeticAlgorithmC,
@@ -100,10 +101,10 @@ def main():
         results[alg.__name__] = collector
 
     if args.output_filename is None:
-        print results
+        print json.dumps(results)
     else:
         f = open(args.output_filename, 'wb')
-        f.write(str(results))
+        f.write(json.dumps(results))
         f.close()
 
 
