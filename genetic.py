@@ -118,7 +118,7 @@ class GeneticAlgorithmMixin(object):
 
 class ElitistMixin(object):
     def generate_parents(self):
-        matches = [np.random.choice(self.population, 2) for _ in self.population]
+        matches = [np.random.choice(self.population, 2, replace=False) for _ in self.population]
         winners = np.array([self.selection.select(match) for match in matches])
         self.parents = winners
 
@@ -146,7 +146,7 @@ class ElitistMixin(object):
 
 class StationaryMixin(object):
     def generate_parents(self):
-        matches = [np.random.choice(self.population, 2) for _ in xrange(2)]
+        matches = [np.random.choice(self.population, 2, replace=False) for _ in xrange(2)]
         winners = np.array([self.selection.select(match) for match in matches])
         self.parents = winners
 

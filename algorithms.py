@@ -208,7 +208,7 @@ class MemeticAlgorithmA(BaseMemeticAlgorithm):
 class MemeticAlgorithmB(BaseMemeticAlgorithm):
     def exploit(self):  # just a (random) 10% of the population
         n_chromosomes = self.ga.population.shape[0]
-        indices = np.random.choice(n_chromosomes, n_chromosomes / 10)
+        indices = np.random.choice(n_chromosomes, n_chromosomes / 10, replace=False)
 
         for index in indices:
             self._reset_exploiter()
