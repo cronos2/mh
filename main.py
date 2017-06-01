@@ -10,11 +10,15 @@ from algorithms import (
     ACSGeneticAlgorithm,
     BLXEGeneticAlgorithm,
     BLXSGeneticAlgorithm,
+    DifferentialEvolutionCTBAlgorithm,
+    DifferentialEvolutionRandomAlgorithm,
+    IteratedLocalSearchAlgorithm,
     LocalSearchAlgorithm,
     MemeticAlgorithmA,
     MemeticAlgorithmB,
     MemeticAlgorithmC,
     ReliefAlgorithm,
+    SimulatedAnnealingAlgorithm
 )
 from core import Classifier1NN
 from utils import ArffReader, Result, ResultsCollector
@@ -38,15 +42,14 @@ def main():
 
     databases = ['sonar', 'spambase', 'wdbc']
     algorithms = [
-        ReliefAlgorithm,
-        LocalSearchAlgorithm,
-        ACEGeneticAlgorithm,
-        ACSGeneticAlgorithm,
-        BLXEGeneticAlgorithm,
-        BLXSGeneticAlgorithm,
-        MemeticAlgorithmA,
-        MemeticAlgorithmB,
-        MemeticAlgorithmC,
+        # ReliefAlgorithm,
+        # LocalSearchAlgorithm,
+        # BLXEGeneticAlgorithm,
+        # MemeticAlgorithmC,
+        SimulatedAnnealingAlgorithm,
+        IteratedLocalSearchAlgorithm,
+        DifferentialEvolutionRandomAlgorithm,
+        DifferentialEvolutionCTBAlgorithm
     ]
 
     results = {}
@@ -81,18 +84,23 @@ def main():
 
                 res.end_timer()
 
-                # calculate errors
+                assert (learner.solution.w <= 1).all()
+                # calculate errors and scores
 
-                train_error = learner.classifier.evaluate_solution(
+                res.train_score = learner.classifier.evaluate_solution(
                     learner.solution
                 )
-                test_error = learner.test(partition.testing_set)
+                res.train_error = learner.solution.error
+                res.test_error = learner.classifier.test_error(
+                    test_dataset=partition.testing_set,
+                    w=learner.solution.w
+                )
+                res.test_score = np.mean([1 - res.test_error, learner.solution.redux])
 
                 # set up Result
 
                 res.solution = learner.solution.w.tolist()  # cast np array to list
-                res.train_error = train_error
-                res.test_error = test_error
+
 
                 if args.interactive:
                     print(res)
