@@ -1,3 +1,5 @@
+from collections import Counter
+import math
 import numpy as np
 from scipy.spatial.distance import cdist, pdist, squareform
 
@@ -233,3 +235,72 @@ class MemeticAlgorithmC(BaseMemeticAlgorithm):
             self.current_evaluations += self.exploiter.train()  # returns used evals
 
             self.ga.population[index] = self.exploiter.solution  # replace agent
+
+
+class SimulatedAnnealingAlgorithm(BaseAlgorithm):
+    def __init__(self, dataset, max_evaluations=15000, mu=0.3, phi=0.3):
+        self.classifier = Classifier1NN(dataset)
+        self.n_features = dataset.observations.shape[1]  # number of columns
+        self.solution = Solution(np.random.rand(self.n_features))
+        self.mu = mu
+        self.phi = phi
+
+        self.limits = {
+            'evaluations': max_evaluations,
+            'neighbours': 10 * self.n_features,
+            'successes': self.n_features
+        }
+
+        self.state = Counter()
+
+    def train(self):
+        ## SETUP ##
+
+        self.state.clear()
+        self.best_solution = self.solution
+        cost = self.classifier.evaluate_solution(self.solution)
+        self.state.update('evaluations')
+        self.temperature = - self.mu * cost / math.log(self.phi)
+        self.final_temperature = 1e-3
+
+        # v final temperature must be lower! v
+        assert self.final_temperature < self.temperature
+
+        M = self.limits['evaluations'] / self.limits['neighbours']
+        self.beta = (self.temperature - self.final_temperature) / (M * self.temperature * self.final_temperature)
+
+        while (self.state['evaluations'] <= self.limits['evaluations'] and
+               self.state['successes'] > 0):
+
+            self.state['neighbours'] = 0
+            self.state['successes'] = 0
+
+            while (self.state['evaluations'] <= self.limits['evaluations'] and
+                   self.state['neighbours'] <= self.limits['neighbours'] and
+                   self.state['successes'] <= self.limits['successes']):
+                index = np.random.randint(self.n_features)
+
+                neighbour = Solution(self.solution.w.copy())
+                self.state.update('neighbours')
+                neighbour.w[gene % self.n_features] += np.random.randn()
+                neighbour.normalize()
+                self.classifier.evaluate_solution(neighbour)
+                self.state.update('evaluations')
+
+                delta_score = neighbour.score - self.solution.score
+
+                if (delta_score > 0 or
+                    np.random.rand() <= math.exp(delta_score / self.temperature)):
+                    self.solution = self.neighbour
+                    self.state.update('successes')
+
+                    if self.solution > self.best_solution:  # more score
+                        self.best_solution = self.solution
+
+            self._update_temperature()
+
+        return self.best_solution
+
+    def _update_temperature(self):
+        self.temperature = self.temperature / (1 + self.beta * self.temperature)
+
