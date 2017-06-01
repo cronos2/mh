@@ -71,7 +71,7 @@ class Classifier1NN(object):
             error = self.train_error(weights)
             solution.error = error
 
-            solution.score = np.mean([solution.error, solution.redux])
+            solution.score = np.mean([1 - solution.error, solution.redux])
 
         return solution.score
 
@@ -91,7 +91,7 @@ class Classifier1NN(object):
     def test_solution(self, test_dataset, solution):
         error = self.test_error(test_dataset, solution.w)
 
-        return np.mean([error, solution.redux])
+        return np.mean([1 - error, solution.redux])
 
 
 class Partition(object):
