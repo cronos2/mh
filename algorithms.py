@@ -44,13 +44,14 @@ class LocalSearchAlgorithm(BaseAlgorithm):
             current_evaluations += 1
             gene += 1
 
-            if neighbour.error < self.solution.error:
+            if neighbour > self.solution:  # more score
                 self.solution = neighbour
                 current_neighbours = 0
             else:
                 current_neighbours += 1
 
         return current_evaluations
+
 
 class ReliefAlgorithm(BaseAlgorithm):
     def __init__(self, dataset):

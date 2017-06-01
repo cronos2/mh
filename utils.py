@@ -40,8 +40,10 @@ class Result(object):
             'name': self.name,
             'solution': self.solution,  # this should be a plain Python list
             'test_error': self.test_error,
+            'test_score': self.test_score,
             'time': self.exec_time,
             'train_error': self.train_error,
+            'train_score': self.train_score,
         }
 
     def __str__(self):

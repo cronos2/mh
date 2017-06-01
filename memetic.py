@@ -30,4 +30,4 @@ class MemeticAlgorithmMixin(object):
             self.exploit()  # this increments the evaluations counter
 
 
-        self.solution = np.min(self.ga.population)  # best one
+        self.solution = np.max(self.ga.population)  # best one

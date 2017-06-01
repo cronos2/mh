@@ -3,9 +3,10 @@ from scipy.spatial.distance import cdist, pdist, squareform
 
 
 class Solution(object):
-    def __init__(self, w, error=None):
+    def __init__(self, w, error=None, score=None):
         self.w = np.array(w)
         self.error = error
+        self.score = score
 
     def normalize(self):
         self.w[self.w < 0] = 0  # truncate negative values
@@ -16,22 +17,26 @@ class Solution(object):
     # comparison operators
 
     def __ge__(self, other):
-        return self.error.__ge__(other.error)
+        return self.score.__ge__(other.score)
 
     def __gt__(self, other):
-        return self.error.__gt__(other.error)
+        return self.score.__gt__(other.score)
 
     def __le__(self, other):
-        return self.error.__le__(other.error)
+        return self.score.__le__(other.score)
 
     def __lt__(self, other):
-        return self.error.__lt__(other.error)
+        return self.score.__lt__(other.score)
 
     def __str__(self):
-        return '{} ({})'.format(self.w, self.error)
+        return '{} ({})'.format(self.w, self.score)
 
     def __repr__(self):
         return str(self)
+
+    @property
+    def redux(self):
+        return np.mean(self.w < 0.1)  # features "unused" / total features
 
     @property
     def succ(self):
@@ -61,14 +66,14 @@ class Classifier1NN(object):
         return error
 
     def evaluate_solution(self, solution):
-        if solution.error is None:
+        if solution.score is None:
             weights = solution.w
             error = self.train_error(weights)
             solution.error = error
 
-            return error
-        else:
-            return solution.error
+            solution.score = np.mean([solution.error, solution.redux])
+
+        return solution.score
 
     def test_error(self, test_dataset, w):
         distances = cdist(
@@ -84,7 +89,9 @@ class Classifier1NN(object):
         return error
 
     def test_solution(self, test_dataset, solution):
-        return self.test_error(test_dataset, solution.w)
+        error = self.test_error(test_dataset, solution.w)
+
+        return np.mean([error, solution.redux])
 
 
 class Partition(object):

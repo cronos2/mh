@@ -10,7 +10,7 @@ class BinaryTournamentSelectionOperator(object):
         Warning: will work otherwise, but my lead to logic errors
         '''
 
-        return np.min(chromosomes)  # less error
+        return np.max(chromosomes)  # max score
 
 
 class BlendAlphaCrossoverOperator(object):
@@ -111,7 +111,7 @@ class GeneticAlgorithmMixin(object):
 
         # end of training
 
-        self.solution = np.min(self.population)  # less error
+        self.solution = np.max(self.population)  # max score
 
         return self.current_evaluations
 
@@ -132,10 +132,10 @@ class ElitistMixin(object):
 
         # "replace" worst child for best parent
 
-        best = np.argmin(self.population)  # min error
+        best = np.argmax(self.population)  # max score
 
         if self.population[best] not in offspring:  # doesn't survive
-            worst = np.argmax(offspring)  # max error
+            worst = np.argmin(offspring)  # min score
             offspring[worst] = self.population[best]
 
         # actual replacement
@@ -160,9 +160,9 @@ class StationaryMixin(object):
 
         # replace worst parents for best children
 
-        self.population.partition(-2)  # two worst (greater ones)
-        contestants = np.concatenate((self.population[-2:], offspring))
-        selected = np.partition(contestants, 1)[:2]  # two best
+        self.population.partition(2)  # two worst (smaller score)
+        contestants = np.concatenate((self.population[:2], offspring))
+        selected = np.partition(contestants, -1)[-2:]  # two best
 
-        self.population[-2:] = selected
+        self.population[:2] = selected
         self.parents = np.array([])
