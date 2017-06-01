@@ -342,3 +342,89 @@ class IteratedLocalSearchAlgorithm(BaseAlgorithm):
         return mutated
 
 
+class DifferentialEvolutionMixin(object):
+    def __init__(self, n_population, n_genes, max_evaluations, CR=0.5, F=0.5):
+        self.population = np.array([Solution(c) for c in np.random.rand(n_population, n_genes)])
+        self.n_population = n_population
+        self.n_genes = n_genes
+        self.max_evaluations = max_evaluations
+        self.current_evaluations = 0
+        self.CR = CR
+        self.F = F
+
+    def train(self):
+        for pop in self.population:
+            self.classifier.evaluate_solution(pop)
+
+        self.current_evaluations = self.n_population
+
+        while self.current_evaluations < self.max_evaluations:
+            parents = self.generate_parents()
+            offspring = np.array([Solution(pop.w.copy()) for pop in self.population])
+
+            for i, child in enumerate(offspring):
+                self.crossover(child, parents[i])
+
+            self.current_evaluations += np.size(offspring)
+            self.population = np.maximum(self.population, offspring)
+
+        return np.max(self.population)  # best score
+
+
+class DifferentialEvolutionRandomAlgorithm(BaseAlgorithm, DifferentialEvolutionMixin):
+    def __init__(self, dataset):
+        super(DifferentialEvolutionRandomAlgorithm, self).__init__(
+            n_population=50,
+            n_genes=dataset.observations.shape[1],  # number of columns
+            max_evaluations=15000,
+            CR=0.5,
+            F=0.5
+        )
+
+    def generate_parents(self):
+        return np.array([np.random.choice(
+            self.n_population,
+            3,
+            replace=False
+        ) for _ in self.population])  # 3 parents for every individual
+
+    def crossover(self, child, parents):
+        crossover_mask = np.random.rand(self.n_genes) < self.CR
+
+        child.w[crossover_mask] = parents[0].w[crossover_mask] + F * (parents[1].w[crossover_mask] - parents[2].w[crossover_mask])
+        child.normalize()
+
+        self.classifier.evaluate_solution(child)
+
+
+class DifferentialEvolutionCTBAlgorithm(BaseAlgorithm, DifferentialEvolutionMixin):
+    def __init__(self, dataset):
+        super(DifferentialEvolutionCTBAlgorithm, self).__init__(
+            n_population=50,
+            n_genes=dataset.observations.shape[1],  # number of columns
+            max_evaluations=15000,
+            CR=0.5,
+            F=0.5
+        )
+
+    def generate_parents(self):
+        self.current_best = np.max(self.population)
+
+        return np.array([np.random.choice(
+            self.n_population,
+            2,
+            replace=False
+        ) for _ in self.population])  # 2 parents for every individual
+
+    def crossover(self, child, parents):
+        crossover_mask = np.random.rand(self.n_genes) < self.CR
+
+        child.w[crossover_mask] += F * (
+            self.current_best.w[crossover_mask] -
+            child.w[crossover_mask] +
+            parents[0].w[crossover_mask] -
+            parents[1].w[crossover_mask]
+        )
+        child.normalize()
+
+        self.classifier.evaluate_solution(child)
