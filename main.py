@@ -22,7 +22,6 @@ from utils import ArffReader, Result, ResultsCollector
 
 def main():
     np.seterr(all='raise')  # always raise error, no runtime warnings
-    np.random.seed(0)
 
     parser = argparse.ArgumentParser(description='Ejecuta los experimentos de la primera práctica de Metaheurísticas')
     parser.add_argument(
@@ -59,6 +58,8 @@ def main():
             print('{emph} {alg} {emph}'.format(emph='='*20, alg=alg.__name__))
 
         for db in databases:
+            np.random.seed(0)  # reset NumPy PRNG seed
+
             dataset = ArffReader.read(db)
             partitions = dataset.generate_partitions()
 
