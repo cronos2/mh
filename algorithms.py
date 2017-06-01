@@ -304,3 +304,41 @@ class SimulatedAnnealingAlgorithm(BaseAlgorithm):
     def _update_temperature(self):
         self.temperature = self.temperature / (1 + self.beta * self.temperature)
 
+
+class IteratedLocalSearchAlgorithm(BaseAlgorithm):
+    def __init__(self, dataset, max_evaluations=15000, n_exploits=15, mutation_factor=0.1, sigma=0.4):
+        self.classifier = Classifier1NN(dataset)
+        self.max_evaluations = max_evaluations
+        self.n_features = dataset.observations.shape[1]  # number of columns
+        self.n_exploits = n_exploits
+        self.solution = Solution(np.random.rand(self.n_features))
+        self.t = np.round(self.n_features * mutation_factor).astype(int)  # force cast
+        self.sigma = sigma
+
+    def train(self):
+        self.classifier.evaluate_solution(self.solution)
+
+        for _ in xrange(self.n_exploits):
+            ls = LocalSearchAlgorithm(
+                dataset=self.classifier.dataset,
+                max_evaluations=self.max_evaluations / self.n_exploits
+            )
+
+            ls.solution = self._mutate(self.solution)  # override default random solution
+            ls.train()
+
+            if ls.solution > self.solution:  # more score
+                self.solution = ls.solution
+
+        return self.solution
+
+    def _mutate(self, solution):
+        indices = np.random.choice(self.n_features, self.t, replace=False)
+
+        mutated = Solution(solution.w.copy())
+        mutated.w[indices] += np.random.randn(self.t) * self.sigma
+        mutated.normalize()
+
+        return mutated
+
+
