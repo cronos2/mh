@@ -1,2 +1,5 @@
 *.pyc
 *.xls
+report/
+*Python*
+*.zip
