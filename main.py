@@ -42,10 +42,10 @@ def main():
 
     databases = ['sonar', 'spambase', 'wdbc']
     algorithms = [
-        # ReliefAlgorithm,
-        # LocalSearchAlgorithm,
-        # BLXEGeneticAlgorithm,
-        # MemeticAlgorithmC,
+        ReliefAlgorithm,
+        LocalSearchAlgorithm,
+        BLXEGeneticAlgorithm,
+        MemeticAlgorithmC,
         SimulatedAnnealingAlgorithm,
         IteratedLocalSearchAlgorithm,
         DifferentialEvolutionRandomAlgorithm,
@@ -84,7 +84,6 @@ def main():
 
                 res.end_timer()
 
-                assert (learner.solution.w <= 1).all()
                 # calculate errors and scores
 
                 res.train_score = learner.classifier.evaluate_solution(
