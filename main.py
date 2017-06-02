@@ -64,7 +64,7 @@ def main():
             np.random.seed(0)  # reset NumPy PRNG seed
 
             dataset = ArffReader.read(db)
-            partitions = dataset.generate_partitions()
+            partitions = dataset.kfoldcv(K=5)
 
             if args.interactive:
                 print('{emph} {db} {emph}'.format(emph='*'*10, db=db))
