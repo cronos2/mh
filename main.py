@@ -109,6 +109,13 @@ def main():
 
         results[alg.__name__] = collector
 
+    # transform to something JSON can work with
+
+    results = {
+        alg: collector.serialize()
+        for alg, collector in results.iteritems()
+    }
+
     if args.output_filename is None:
         print json.dumps(results)
     else:

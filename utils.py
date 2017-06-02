@@ -57,8 +57,11 @@ class ResultsCollector(object):
     def append_result(self, result):
         self.results.append(result)
 
+    def serialize(self):
+        return [res.summary() for res in self.results]
+
     def __str__(self):
-        return json.dumps([res.summary() for res in self.results])
+        return json.dumps(self.serialize())
 
     def __repr__(self):
         return str(self)
