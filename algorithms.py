@@ -365,16 +365,16 @@ class DifferentialEvolutionMixin(object):
         self.current_evaluations = self.n_population
 
         while self.current_evaluations < self.max_evaluations:
-            parents = self.generate_parents()
+            parents = self.generate_parents()  # actually indices
             offspring = np.array([Solution(pop.w.copy()) for pop in self.population])
 
             for i, child in enumerate(offspring):
-                self.crossover(child, parents[i])
+                self.crossover(child, self.population[parents[i]])
 
             self.current_evaluations += np.size(offspring)
             self.population = np.maximum(self.population, offspring)
 
-        return np.max(self.population)  # best score
+        self.solution = np.max(self.population)  # best score
 
 
 class DifferentialEvolutionRandomAlgorithm(BaseAlgorithm, DifferentialEvolutionMixin):
@@ -387,6 +387,8 @@ class DifferentialEvolutionRandomAlgorithm(BaseAlgorithm, DifferentialEvolutionM
             F=0.5
         )
 
+        self.classifier = Classifier1NN(dataset)
+
     def generate_parents(self):
         return np.array([np.random.choice(
             self.n_population,
@@ -397,7 +399,7 @@ class DifferentialEvolutionRandomAlgorithm(BaseAlgorithm, DifferentialEvolutionM
     def crossover(self, child, parents):
         crossover_mask = np.random.rand(self.n_genes) < self.CR
 
-        child.w[crossover_mask] = parents[0].w[crossover_mask] + F * (parents[1].w[crossover_mask] - parents[2].w[crossover_mask])
+        child.w[crossover_mask] = parents[0].w[crossover_mask] + self.F * (parents[1].w[crossover_mask] - parents[2].w[crossover_mask])
         child.normalize()
 
         self.classifier.evaluate_solution(child)
@@ -413,6 +415,8 @@ class DifferentialEvolutionCTBAlgorithm(BaseAlgorithm, DifferentialEvolutionMixi
             F=0.5
         )
 
+        self.classifier = Classifier1NN(dataset)
+
     def generate_parents(self):
         self.current_best = np.max(self.population)
 
@@ -425,7 +429,7 @@ class DifferentialEvolutionCTBAlgorithm(BaseAlgorithm, DifferentialEvolutionMixi
     def crossover(self, child, parents):
         crossover_mask = np.random.rand(self.n_genes) < self.CR
 
-        child.w[crossover_mask] += F * (
+        child.w[crossover_mask] += self.F * (
             self.current_best.w[crossover_mask] -
             child.w[crossover_mask] +
             parents[0].w[crossover_mask] -
