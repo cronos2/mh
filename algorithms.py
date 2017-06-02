@@ -259,7 +259,7 @@ class SimulatedAnnealingAlgorithm(BaseAlgorithm):
         self.state.clear()
         self.best_solution = self.solution
         cost = self.classifier.evaluate_solution(self.solution)
-        self.state.update('evaluations')
+        self.state.update(['evaluations'])
         self.temperature = - self.mu * cost / math.log(self.phi)
         self.final_temperature = 1e-3
 
@@ -268,6 +268,8 @@ class SimulatedAnnealingAlgorithm(BaseAlgorithm):
 
         M = self.limits['evaluations'] / self.limits['neighbours']
         self.beta = (self.temperature - self.final_temperature) / (M * self.temperature * self.final_temperature)
+
+        self.state.update(['successes'])  # hack first iteration
 
         while (self.state['evaluations'] <= self.limits['evaluations'] and
                self.state['successes'] > 0):
@@ -281,23 +283,27 @@ class SimulatedAnnealingAlgorithm(BaseAlgorithm):
                 index = np.random.randint(self.n_features)
 
                 neighbour = Solution(self.solution.w.copy())
-                self.state.update('neighbours')
-                neighbour.w[gene % self.n_features] += np.random.randn()
+                self.state.update(['neighbours'])
+                feature = np.random.randint(self.n_features)
+                neighbour.w[feature] += np.random.randn()
                 neighbour.normalize()
                 self.classifier.evaluate_solution(neighbour)
-                self.state.update('evaluations')
+                self.state.update(['evaluations'])
 
                 delta_score = neighbour.score - self.solution.score
 
                 if (delta_score > 0 or
                     np.random.rand() <= math.exp(delta_score / self.temperature)):
-                    self.solution = self.neighbour
-                    self.state.update('successes')
+                    self.solution = neighbour
+                    self.state.update(['successes'])
 
                     if self.solution > self.best_solution:  # more score
                         self.best_solution = self.solution
 
             self._update_temperature()
+
+        if self.state['successes'] <= 0:
+            print self.state
 
         return self.best_solution
 
