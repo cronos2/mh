@@ -158,6 +158,7 @@ class Dataset(object):
             for indices in partitions_indices]).flatten()
 
         return partitions
+
     def kfoldcv(self, K=5):
         total_items = np.size(self.labels)
         shuffle = np.random.permutation(total_items)
@@ -165,13 +166,13 @@ class Dataset(object):
         partitions_indices = np.array_split(shuffle, K)
 
         partitions = [Partition(self, [
-            np.delete(partitions_indices, i, 0).flatten(),
+            np.array([
+                item
+                for sublist in np.delete(partitions_indices, i, 0)
+                for item in sublist
+            ]),  # avoid NumPy flatten (heterogeneous dimensions)
             partitions_indices[i]
         ])
                       for i in xrange(K)]
 
         return partitions
-
-
-
-class Conditions(object):
